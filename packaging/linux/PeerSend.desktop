@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=PeerSend
+Comment=PeerSend desktop engine
+Exec=PeerSend
+Icon=peersend
+Categories=Network;FileTransfer;
+MimeType=x-scheme-handler/peersend;
+Terminal=false

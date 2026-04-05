@@ -1,0 +1,15 @@
+Windows Registry Editor Version 5.00
+
+[HKEY_CURRENT_USER\Software\Classes\peersend]
+@="URL:PeerSend Protocol"
+"URL Protocol"=""
+
+[HKEY_CURRENT_USER\Software\Classes\peersend\DefaultIcon]
+@="C:\\Program Files\\PeerSend\\PeerSend.exe,0"
+
+[HKEY_CURRENT_USER\Software\Classes\peersend\shell]
+
+[HKEY_CURRENT_USER\Software\Classes\peersend\shell\open]
+
+[HKEY_CURRENT_USER\Software\Classes\peersend\shell\open\command]
+@="\"C:\\Program Files\\PeerSend\\PeerSend.exe\" \"%1\""

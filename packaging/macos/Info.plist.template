@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>CFBundleDisplayName</key>
+  <string>PeerSend</string>
+  <key>CFBundleExecutable</key>
+  <string>PeerSend</string>
+  <key>CFBundleIdentifier</key>
+  <string>com.rhkr8521.peersend.desktop</string>
+  <key>CFBundleIconFile</key>
+  <string>PeerSend.icns</string>
+  <key>CFBundleShortVersionString</key>
+  <string>__PEERSEND_VERSION__</string>
+  <key>CFBundleVersion</key>
+  <string>__PEERSEND_VERSION__</string>
+  <key>CFBundleName</key>
+  <string>PeerSend</string>
+  <key>NSLocalNetworkUsageDescription</key>
+  <string>PeerSend uses your local network to discover nearby devices and transfer files directly.</string>
+  <key>CFBundlePackageType</key>
+  <string>APPL</string>
+  <key>LSUIElement</key>
+  <true/>
+  <key>CFBundleURLTypes</key>
+  <array>
+    <dict>
+      <key>CFBundleTypeRole</key>
+      <string>Editor</string>
+      <key>CFBundleURLName</key>
+      <string>com.rhkr8521.peersend.desktop</string>
+      <key>CFBundleURLSchemes</key>
+      <array>
+        <string>peersend</string>
+      </array>
+    </dict>
+  </array>
+</dict>
+</plist>
