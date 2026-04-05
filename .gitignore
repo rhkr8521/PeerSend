@@ -1,6 +1,7 @@
 *.iml
 .gradle
 /local.properties
+/.idea/
 /.idea/caches
 /.idea/libraries
 /.idea/modules.xml
@@ -24,3 +25,4 @@ web/node_modules/
 node_modules/
 xcuserdata/
 *.xcuserstate
+web/.env.example
