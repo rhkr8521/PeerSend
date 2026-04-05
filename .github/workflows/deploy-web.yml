@@ -1,0 +1,103 @@
+name: Deploy PeerSend Web
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "web/**"
+      - ".github/workflows/deploy-web.yml"
+  workflow_dispatch:
+
+env:
+  IMAGE_NAME: peersend_send_web
+  CONTAINER_NAME: peersend_send_web
+
+jobs:
+  build-and-push:
+    name: Build And Push Web Image
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: web/package-lock.json
+
+      - name: Build web
+        working-directory: web
+        run: |
+          npm ci
+          npm run build
+
+      - name: Login to Docker Hub
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_PASSWORD: ${{ secrets.DOCKERHUB_PASSWORD }}
+        run: |
+          unset DOCKER_HOST DOCKER_TLS_CERTDIR
+          echo "$DOCKERHUB_PASSWORD" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+
+      - name: Build and push image
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+        run: |
+          unset DOCKER_HOST DOCKER_TLS_CERTDIR
+          IMAGE="$DOCKERHUB_USERNAME/${IMAGE_NAME}:main"
+          docker build -t "$IMAGE" web
+          docker push "$IMAGE"
+
+  deploy:
+    name: Deploy To Docker Host Runner
+    needs: build-and-push
+    runs-on: self-hosted
+
+    env:
+      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+      DOCKERHUB_PASSWORD: ${{ secrets.DOCKERHUB_PASSWORD }}
+      FE_PORT: ${{ vars.FE_PORT }}
+      IMAGE: ${{ secrets.DOCKERHUB_USERNAME }}/peersend_send_web:main
+      CONTAINER: peersend_send_web
+
+    steps:
+      - name: Prepare Docker environment
+        run: |
+          unset DOCKER_HOST DOCKER_TLS_CERTDIR
+
+      - name: Login to Docker Hub
+        run: |
+          unset DOCKER_HOST DOCKER_TLS_CERTDIR
+          echo "$DOCKERHUB_PASSWORD" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+
+      - name: Pull latest image
+        run: |
+          unset DOCKER_HOST DOCKER_TLS_CERTDIR
+          docker pull "$IMAGE"
+
+      - name: Stop existing container
+        run: |
+          unset DOCKER_HOST DOCKER_TLS_CERTDIR
+          docker stop "$CONTAINER" || true
+
+      - name: Remove existing container
+        run: |
+          unset DOCKER_HOST DOCKER_TLS_CERTDIR
+          docker rm "$CONTAINER" || true
+
+      - name: Run container
+        run: |
+          unset DOCKER_HOST DOCKER_TLS_CERTDIR
+          HOST_PORT="${FE_PORT:-8081}"
+          docker run -d --name "$CONTAINER" --restart unless-stopped -e TZ=Asia/Seoul -p ${HOST_PORT}:80 "$IMAGE"
+
+      - name: Prune old images
+        run: |
+          unset DOCKER_HOST DOCKER_TLS_CERTDIR
+          docker image prune -f
