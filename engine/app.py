@@ -186,14 +186,14 @@ def create_app() -> FastAPI:
 
     @app.post("/api/save-path/dialog")
     async def save_path_dialog() -> dict:
-        result = engine().choose_save_path_dialog()
+        result = await asyncio.to_thread(engine().choose_save_path_dialog)
         if not result.get("ok") and not result.get("cancelled") and result.get("error"):
             raise HTTPException(status_code=500, detail=str(result.get("error")))
         return result
 
     @app.post("/api/send-files/dialog")
     async def send_files_dialog() -> dict:
-        result = engine().choose_send_files_dialog()
+        result = await asyncio.to_thread(engine().choose_send_files_dialog)
         if not result.get("ok") and not result.get("cancelled") and result.get("error"):
             raise HTTPException(status_code=500, detail=str(result.get("error")))
         return result
