@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 const LOCAL_ORIGIN = import.meta.env.VITE_PEERSEND_LOCAL_ORIGIN || "http://127.0.0.1:8765";
 const CUSTOM_PROTOCOL = import.meta.env.VITE_PEERSEND_PROTOCOL || "peersend://launch";
-const REQUIRED_ENGINE_VERSION = import.meta.env.VITE_PEERSEND_REQUIRED_ENGINE_VERSION || "1.2.1";
+const REQUIRED_ENGINE_VERSION = import.meta.env.VITE_PEERSEND_REQUIRED_ENGINE_VERSION || "1.2.2";
 const DOWNLOAD_URLS = {
   windows:
     import.meta.env.VITE_PEERSEND_WINDOWS_DOWNLOAD_URL ||
@@ -119,6 +119,7 @@ const COPY = {
     file_count_one: "파일 1개",
     reject: "거절",
     accept: "수락",
+    file_picker_failed: "파일 선택 창을 열지 못했습니다.",
     realtime_unstable: "실시간 연결이 불안정합니다.",
     realtime_closed: "로컬 엔진 연결이 종료되었습니다. 다시 연결을 시도합니다.",
     engine_unresponsive: "로컬 엔진이 응답하지 않습니다. 다시 연결을 시도합니다.",
@@ -230,6 +231,7 @@ const COPY = {
     file_count_one: "1 file",
     reject: "Reject",
     accept: "Accept",
+    file_picker_failed: "Failed to open the file picker.",
     realtime_unstable: "The realtime connection is unstable.",
     realtime_closed: "The local engine connection closed. Reconnecting now.",
     engine_unresponsive: "The local engine is not responding. Reconnecting now.",
@@ -529,7 +531,6 @@ export default function App() {
   const [showZipChoice, setShowZipChoice] = useState(false);
   const [showTransferPreparing, setShowTransferPreparing] = useState(false);
   const [transferPreparingSettled, setTransferPreparingSettled] = useState(false);
-  const fileInputRef = useRef(null);
   const sessionIdRef = useRef(nextId());
   const reconnectTimerRef = useRef(null);
   const launcherProbeTimerRef = useRef(null);
@@ -973,50 +974,46 @@ export default function App() {
     }
   }
 
-  function openFileChooser() {
+  async function openFileChooser() {
     if (!selectedPeerId || state.isBusy) {
       return;
     }
-    const input = fileInputRef.current;
-    if (!input) {
-      return;
+    try {
+      const result = await apiRequest(backendOrigin, "/api/send-files/dialog", { method: "POST" });
+      const files = Array.isArray(result.files) ? result.files : [];
+      if (!files.length) {
+        if (!result.cancelled) {
+          pushToast(t("file_picker_failed"));
+        }
+        return;
+      }
+      if (files.length > 1) {
+        setPendingFiles(files);
+        setShowZipChoice(true);
+        return;
+      }
+      void sendSelectedFiles(files, false);
+    } catch (error) {
+      pushToast(error.message);
     }
-    input.value = "";
-    input.click();
   }
 
-  function handleFilesSelected(event) {
-    const files = Array.from(event.target.files || []);
-    if (!files.length) {
-      return;
-    }
-    if (files.length > 1) {
-      setPendingFiles(files);
-      setShowZipChoice(true);
-      return;
-    }
-    void uploadFiles(files, false);
-  }
-
-  async function uploadFiles(files, useZip) {
+  async function sendSelectedFiles(files, useZip) {
     if (!files.length || !selectedPeerId) {
       return;
     }
 
-    const formData = new FormData();
-    formData.append("mode", state.mode);
-    formData.append("peer_id", selectedPeerId);
-    formData.append("use_zip", useZip ? "true" : "false");
-    files.forEach((file) => {
-      formData.append("files", file, file.name);
-    });
-
     setShowTransferPreparing(true);
     setTransferPreparingSettled(false);
     try {
-      await apiRequest(backendOrigin, "/api/send-upload", {
+      await apiRequest(backendOrigin, "/api/send-files", {
         method: "POST",
-        body: formData,
+        body: JSON.stringify({
+          mode: state.mode,
+          peer_id: selectedPeerId,
+          use_zip: useZip,
+          file_paths: files.map((file) => file.path),
+        }),
       });
       setPendingFiles([]);
       setShowZipChoice(false);
@@ -1121,14 +1118,6 @@ export default function App() {
 
   return (
     <div className="app-shell">
-      <input
-        ref={fileInputRef}
-        className="hidden-input"
-        type="file"
-        multiple
-        onChange={handleFilesSelected}
-      />
-
       <header className="hero">
         <section className="hero-panel hero-intro">
           <div className="hero-copy">
@@ -1425,7 +1414,7 @@ export default function App() {
                   className="secondary-button"
                   onClick={() => {
                     setShowZipChoice(false);
-                    void uploadFiles(pendingFiles, false);
+                    void sendSelectedFiles(pendingFiles, false);
                   }}
                 >
                   {t("no")}
@@ -1434,7 +1423,7 @@ export default function App() {
                   className="primary-button"
                   onClick={() => {
                     setShowZipChoice(false);
-                    void uploadFiles(pendingFiles, true);
+                    void sendSelectedFiles(pendingFiles, true);
                   }}
                 >
                   {t("yes")}

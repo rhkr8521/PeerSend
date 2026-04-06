@@ -609,6 +609,67 @@ end try
         except Exception as error:
             return {"ok": False, "path": None, "cancelled": False, "error": str(error)}
 
+    def choose_send_files_dialog(self) -> dict[str, Any]:
+        if platform.system() == "Darwin":
+            default_dir = self.save_path or _default_save_path()
+            script = f'''
+try
+    set defaultFolder to POSIX file "{_escape_applescript_string(default_dir)}"
+    set chosenFiles to choose file with prompt "Choose files to send with PeerSend" default location defaultFolder with multiple selections allowed
+    set outputText to ""
+    repeat with chosenFile in chosenFiles
+        set outputText to outputText & POSIX path of chosenFile & linefeed
+    end repeat
+    return outputText
+on error number -128
+    return ""
+end try
+'''
+            try:
+                result = subprocess.run(
+                    ["osascript", "-e", script],
+                    capture_output=True,
+                    text=True,
+                    check=False,
+                )
+                if result.returncode == 0:
+                    raw_paths = [line.strip() for line in (result.stdout or "").splitlines() if line.strip()]
+                    files = [
+                        {"path": path, "name": Path(path).name}
+                        for path in raw_paths
+                        if os.path.isfile(path)
+                    ]
+                    if files:
+                        return {"ok": True, "files": files, "cancelled": False}
+                    return {"ok": False, "files": [], "cancelled": True}
+                stderr = (result.stderr or "").strip()
+                if "User canceled" in stderr:
+                    return {"ok": False, "files": [], "cancelled": True}
+                return {"ok": False, "files": [], "cancelled": False, "error": stderr or "Failed to open file dialog."}
+            except Exception as error:
+                return {"ok": False, "files": [], "cancelled": False, "error": str(error)}
+        try:
+            import tkinter as tk
+            from tkinter import filedialog
+
+            root = tk.Tk()
+            root.withdraw()
+            root.attributes("-topmost", True)
+            root.update()
+            paths = list(
+                filedialog.askopenfilenames(
+                    title="Choose files to send with PeerSend",
+                    initialdir=self.save_path or _default_save_path(),
+                )
+            )
+            root.destroy()
+            files = [{"path": path, "name": Path(path).name} for path in paths if os.path.isfile(path)]
+            if files:
+                return {"ok": True, "files": files, "cancelled": False}
+            return {"ok": False, "files": [], "cancelled": True}
+        except Exception as error:
+            return {"ok": False, "files": [], "cancelled": False, "error": str(error)}
+
     def cancel_transfer(self) -> None:
         self.cancel_flag = True
         sock = self.active_receive_sock
@@ -1069,6 +1130,24 @@ end try
     # ------------------------
     # send flow
     # ------------------------
+    def queue_send_native_files(self, *, mode: str, peer_id: str, file_paths: list[str], use_zip: bool) -> None:
+        normalized_paths: list[str] = []
+        normalized_names: list[str] = []
+        for path in file_paths:
+            cleaned = os.path.abspath(os.path.expanduser(str(path).strip()))
+            if not cleaned or not os.path.isfile(cleaned):
+                continue
+            normalized_paths.append(cleaned)
+            normalized_names.append(Path(cleaned).name)
+        self.queue_send_files(
+            mode=mode,
+            peer_id=peer_id,
+            file_paths=normalized_paths,
+            filenames=normalized_names,
+            use_zip=use_zip,
+            cleanup_dir=None,
+        )
+
     def queue_send_files(self, *, mode: str, peer_id: str, file_paths: list[str], filenames: list[str], use_zip: bool, cleanup_dir: Optional[str] = None) -> None:
         if not peer_id:
             raise ValueError("peer_id is required")

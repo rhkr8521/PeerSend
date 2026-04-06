@@ -51,6 +51,13 @@ class SavePathPayload(BaseModel):
     path: str
 
 
+class SendFilesPayload(BaseModel):
+    mode: Literal["lan", "tunnel"]
+    peer_id: str
+    use_zip: bool = False
+    file_paths: list[str]
+
+
 class RespondPayload(BaseModel):
     request_id: str
     accept: bool
@@ -183,6 +190,26 @@ def create_app() -> FastAPI:
         if not result.get("ok") and not result.get("cancelled") and result.get("error"):
             raise HTTPException(status_code=500, detail=str(result.get("error")))
         return result
+
+    @app.post("/api/send-files/dialog")
+    async def send_files_dialog() -> dict:
+        result = engine().choose_send_files_dialog()
+        if not result.get("ok") and not result.get("cancelled") and result.get("error"):
+            raise HTTPException(status_code=500, detail=str(result.get("error")))
+        return result
+
+    @app.post("/api/send-files")
+    async def send_files(payload: SendFilesPayload) -> dict:
+        try:
+            engine().queue_send_native_files(
+                mode=payload.mode,
+                peer_id=payload.peer_id,
+                file_paths=payload.file_paths,
+                use_zip=payload.use_zip,
+            )
+        except (ValueError, RuntimeError) as error:
+            raise HTTPException(status_code=400, detail=str(error)) from error
+        return {"ok": True}
 
     @app.post("/api/respond")
     async def respond(payload: RespondPayload) -> dict:

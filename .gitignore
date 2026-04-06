@@ -26,3 +26,4 @@ node_modules/
 xcuserdata/
 *.xcuserstate
 web/.env.example
+Android/app/release/
