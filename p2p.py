@@ -32,9 +32,13 @@ import time
 import json
 import uuid
 import base64
+import locale
+import platform
+import re
 import socket
 import struct
 import pickle
+import subprocess
 import threading
 import tempfile
 import zipfile
@@ -44,6 +48,11 @@ from typing import Any, Dict, Optional
 
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
+
+try:
+    from engine.version import ENGINE_VERSION as APP_VERSION
+except Exception:
+    APP_VERSION = "1.2.2"
 
 
 # =========================
@@ -67,6 +76,233 @@ POLL_INTERVAL_SEC = float(os.getenv("PEER_POLL_INTERVAL", "3.0"))
 
 TUNNEL_TCP_NAME = "file_tunnel"
 CONTROL_CODEC = os.getenv("CONTROL_CODEC", "pickle").strip().lower()
+
+
+def detect_ui_language() -> str:
+    candidates = []
+    for key in ("LC_ALL", "LANGUAGE", "LANG", "LC_MESSAGES"):
+        try:
+            value = os.environ.get(key)
+            if value:
+                candidates.append(value)
+        except Exception:
+            pass
+    try:
+        candidates.append(locale.getlocale()[0])
+    except Exception:
+        pass
+    try:
+        default_locale = locale.getdefaultlocale()[0]  # type: ignore[attr-defined]
+        candidates.append(default_locale)
+    except Exception:
+        pass
+    system_name = platform.system()
+    if system_name == "Darwin":
+        try:
+            apple_languages = subprocess.check_output(
+                ["defaults", "read", "-g", "AppleLanguages"],
+                text=True,
+                stderr=subprocess.DEVNULL,
+            )
+            candidates.append(apple_languages)
+        except Exception:
+            pass
+    elif system_name == "Windows":
+        try:
+            import ctypes
+
+            lang_id = ctypes.windll.kernel32.GetUserDefaultUILanguage()
+            candidates.append(locale.windows_locale.get(lang_id))
+        except Exception:
+            pass
+    text = " ".join(str(candidate or "") for candidate in candidates).lower()
+    return "ko" if re.search(r"(^|[^a-z])ko(?:[-_][a-z0-9]+)?([^a-z]|$)", text) or "korean" in text else "en"
+
+
+TEXTS = {
+    "ko": {
+        "app_title": "PeerSend ({version})",
+        "app_title_offline": "PeerSend 오프라인 모드 ({version})",
+        "offline_notice": "웹과 통신이 불가능하여 오프라인 모드로 실행되었습니다.",
+        "offline_badge": "LAN 전용",
+        "display_file_default": "파일",
+        "display_more_files": "{name} 외 {count}개",
+        "label_ip": "🖥️ IP: {ip}",
+        "label_name": "💾 이름: {name}",
+        "mode_lan": "LAN 모드",
+        "mode_tunnel": "터널 모드",
+        "button_tunnel": "🌐 터널 접속",
+        "button_lan": "📡 LAN 통신",
+        "tunnel_settings": "🌐 터널 설정",
+        "server_host": "서버 주소(Host:Port)",
+        "token": "TOKEN",
+        "apply_reconnect": "🔄 적용/재연결",
+        "tunnel_disconnected": "(터널 미접속)",
+        "devices_lan": "📡 장치 목록(LAN)",
+        "devices_tunnel": "🌐 터널 PC 목록",
+        "button_refresh": "🔄",
+        "button_save_folder": "📁 저장 폴더",
+        "button_send": "📤 전송",
+        "save_path": "💾 저장: {path}",
+        "file_label": "파일: -",
+        "total_progress": "전체 진행: 0 / 0",
+        "speed_eta": "속도: 0 MB/s | 남은 시간: --:--",
+        "cancel_transfer": "❌ 전송 중단",
+        "applied_title": "적용",
+        "applied_message": "적용 완료:\nWS={ws}\nHEALTH={health}/_health?token=***",
+        "status_ws_connected": "WS 연결됨(등록 중...)",
+        "status_registered_port": "등록 완료 ✅ (내 {name} 포트: {port})",
+        "status_registered_missing_port": "등록 완료 ✅ ({name} 포트 없음?)",
+        "status_register_failed": "등록 실패 ❌ ({reason})",
+        "status_error": "오류: {error}",
+        "status_ws_retrying": "WS 끊김(재시도 중...)",
+        "status_peer_fetch_health_failed": "피어 조회 실패(/_health): {error}",
+        "status_peer_fetch_failed": "피어 조회 실패: {error}",
+        "error_title": "오류",
+        "error_tunnel_bind": "터널 로컬 수신 서버 바인드 실패: 127.0.0.1:{port}\n{error}",
+        "receive_request_title": "파일 수신 요청",
+        "receive_request_body": "[{sender_name}({sender_ip})]가 {display_name} ({size})를 보내려 합니다.\n수신하시겠습니까?",
+        "reject_title": "거절됨",
+        "reject_receive": "수신이 거절되었습니다.",
+        "save_location": "저장 위치: {path}",
+        "saved_files": "[저장된 파일]",
+        "extracted_files": "[추출된 파일]",
+        "and_more": "... 외 {count}개",
+        "cancel_title": "중단",
+        "receive_cancelled_partial": "수신을 중단했습니다. (부분 파일 삭제 완료)",
+        "sender_cancelled_partial": "전송측에서 전송을 중단했습니다. (미완료 파일 삭제 완료)",
+        "done_title": "완료",
+        "multi_meta_failed": "다중 파일 메타데이터 수신 실패",
+        "multi_meta_invalid": "다중 파일 메타데이터가 올바르지 않습니다.",
+        "multi_files": "다중 파일",
+        "receiving_file_indexed": "파일 {name} ({index}/{count}) 수신 중...",
+        "receive_cancelled_batch": "수신을 중단했습니다. (이번 전송 파일 삭제 완료)",
+        "sender_cancelled_batch": "전송측에서 전송을 중단했습니다. (미완료/이번 전송 파일 삭제 완료)",
+        "select_target_first": "전송할 대상을 선택하세요.",
+        "select_files_title": "전송할 파일 선택 (다중 가능)",
+        "no_files_title": "파일 없음",
+        "no_files_body": "파일을 선택해주세요.",
+        "zip_choice_title": "압축 선택",
+        "zip_choice_body": "파일을 ZIP으로 압축하여 전송하시겠습니까?\n\n예: ZIP 압축 (단일 ZIP 전송)\n아니오: 원본 그대로(다중 파일) 전송",
+        "target_device_missing": "대상 장치를 찾을 수 없습니다.",
+        "target_tunnel_missing": "대상 터널 정보를 찾을 수 없습니다.",
+        "target_tunnel_port_missing": "대상 {name} 포트가 없습니다.",
+        "zip_prepare": "ZIP 압축",
+        "compressing_file": "압축 중: {name} ({index}/{count})",
+        "zip_cancelled": "압축을 중단했습니다.",
+        "zip_failed_title": "압축 실패",
+        "zip_failed_body": "ZIP 압축 실패: {error}",
+        "peer_rejected": "상대방이 전송을 거절했습니다.",
+        "server_no_response": "서버 응답 없음",
+        "peer_no_response": "상대방 응답 없음",
+        "connection_error_title": "연결 오류",
+        "connection_error_body": "연결 실패: {error}",
+        "sending_zip": "ZIP {name} 전송 중...",
+        "sending_file": "파일 {name} 전송 중...",
+        "sending_file_indexed": "파일 {name} ({index}/{count}) 전송 중...",
+        "transfer_cancelled": "전송이 중단되었습니다.",
+        "send_complete": "{name} 전송 완료!",
+        "progress_receiving": "{title} 수신 중...",
+        "progress_running": "{title} 진행 중...",
+        "total_progress_current": "전체 진행: {current} / {total}",
+        "speed_eta_current": "속도: {speed:.2f} MB/s | 남은 시간: {time}",
+        "time_seconds": "{seconds}초",
+        "time_minutes": "{minutes}분 {seconds}초",
+        "time_hours": "{hours}시간 {minutes}분",
+        "zip_bundle_name": "{name}_외_{count}개.zip",
+    },
+    "en": {
+        "app_title": "PeerSend ({version})",
+        "app_title_offline": "PeerSend Offline Mode ({version})",
+        "offline_notice": "The web UI is unreachable, so PeerSend started in offline mode.",
+        "offline_badge": "LAN Only",
+        "display_file_default": "File",
+        "display_more_files": "{name} and {count} more",
+        "label_ip": "🖥️ IP: {ip}",
+        "label_name": "💾 Name: {name}",
+        "mode_lan": "LAN Mode",
+        "mode_tunnel": "Tunnel Mode",
+        "button_tunnel": "🌐 Connect Tunnel",
+        "button_lan": "📡 LAN Mode",
+        "tunnel_settings": "🌐 Tunnel Settings",
+        "server_host": "Server Host (Host:Port)",
+        "token": "TOKEN",
+        "apply_reconnect": "🔄 Apply / Reconnect",
+        "tunnel_disconnected": "(Tunnel disconnected)",
+        "devices_lan": "📡 LAN Devices",
+        "devices_tunnel": "🌐 Tunnel PCs",
+        "button_refresh": "🔄",
+        "button_save_folder": "📁 Save Folder",
+        "button_send": "📤 Send",
+        "save_path": "💾 Save: {path}",
+        "file_label": "File: -",
+        "total_progress": "Total Progress: 0 / 0",
+        "speed_eta": "Speed: 0 MB/s | Time left: --:--",
+        "cancel_transfer": "❌ Cancel Transfer",
+        "applied_title": "Applied",
+        "applied_message": "Applied:\nWS={ws}\nHEALTH={health}/_health?token=***",
+        "status_ws_connected": "WS connected (registering...)",
+        "status_registered_port": "Registered ✅ (my {name} port: {port})",
+        "status_registered_missing_port": "Registered ✅ ({name} port missing?)",
+        "status_register_failed": "Registration failed ❌ ({reason})",
+        "status_error": "Error: {error}",
+        "status_ws_retrying": "WS disconnected (retrying...)",
+        "status_peer_fetch_health_failed": "Peer lookup failed (/_health): {error}",
+        "status_peer_fetch_failed": "Peer lookup failed: {error}",
+        "error_title": "Error",
+        "error_tunnel_bind": "Failed to bind the local tunnel receive server: 127.0.0.1:{port}\n{error}",
+        "receive_request_title": "Incoming File Request",
+        "receive_request_body": "[{sender_name}({sender_ip})] wants to send {display_name} ({size}).\nDo you want to receive it?",
+        "reject_title": "Rejected",
+        "reject_receive": "The receive request was rejected.",
+        "save_location": "Save location: {path}",
+        "saved_files": "[Saved Files]",
+        "extracted_files": "[Extracted Files]",
+        "and_more": "... and {count} more",
+        "cancel_title": "Cancelled",
+        "receive_cancelled_partial": "The receive was cancelled. Partial files were removed.",
+        "sender_cancelled_partial": "The sender cancelled the transfer. Incomplete files were removed.",
+        "done_title": "Done",
+        "multi_meta_failed": "Failed to receive multi-file metadata.",
+        "multi_meta_invalid": "The multi-file metadata is invalid.",
+        "multi_files": "Multiple Files",
+        "receiving_file_indexed": "Receiving {name} ({index}/{count})...",
+        "receive_cancelled_batch": "The receive was cancelled. Files from this transfer were removed.",
+        "sender_cancelled_batch": "The sender cancelled the transfer. Incomplete files from this transfer were removed.",
+        "select_target_first": "Select a target device first.",
+        "select_files_title": "Choose files to send (multiple allowed)",
+        "no_files_title": "No Files",
+        "no_files_body": "Please choose at least one file.",
+        "zip_choice_title": "ZIP Option",
+        "zip_choice_body": "Do you want to compress the files into a ZIP before sending?\n\nYes: send one ZIP file\nNo: send each file individually",
+        "target_device_missing": "Could not find the selected device.",
+        "target_tunnel_missing": "Could not find the selected tunnel peer.",
+        "target_tunnel_port_missing": "The selected peer does not have a {name} port.",
+        "zip_prepare": "Creating ZIP",
+        "compressing_file": "Compressing {name} ({index}/{count})",
+        "zip_cancelled": "ZIP creation was cancelled.",
+        "zip_failed_title": "ZIP Failed",
+        "zip_failed_body": "ZIP creation failed: {error}",
+        "peer_rejected": "The receiver rejected the transfer.",
+        "server_no_response": "No response from the server.",
+        "peer_no_response": "No response from the receiver.",
+        "connection_error_title": "Connection Error",
+        "connection_error_body": "Connection failed: {error}",
+        "sending_zip": "Sending ZIP {name}...",
+        "sending_file": "Sending {name}...",
+        "sending_file_indexed": "Sending {name} ({index}/{count})...",
+        "transfer_cancelled": "The transfer was cancelled.",
+        "send_complete": "Finished sending {name}!",
+        "progress_receiving": "Receiving {title}...",
+        "progress_running": "Processing {title}...",
+        "total_progress_current": "Total Progress: {current} / {total}",
+        "speed_eta_current": "Speed: {speed:.2f} MB/s | Time left: {time}",
+        "time_seconds": "{seconds}s",
+        "time_minutes": "{minutes}m {seconds}s",
+        "time_hours": "{hours}h {minutes}m",
+        "zip_bundle_name": "{name}_and_{count}_more.zip",
+    },
+}
 
 
 # =========================
@@ -477,9 +713,15 @@ def _find_nested_tunnel_subdomain(value, depth=0):
 # 통합 앱
 # =========================
 class UnifiedApp:
-    def __init__(self, root: tk.Tk):
+    def __init__(self, root: tk.Tk, lan_only: bool = False):
         self.root = root
-        self.root.title("rhkr8521 P2P File Transfer v17.2")
+        self.lan_only = bool(lan_only)
+        self.language = detect_ui_language()
+        self.root.title(
+            self.tr("app_title_offline", version=APP_VERSION)
+            if self.lan_only
+            else self.tr("app_title", version=APP_VERSION)
+        )
 
         # 공통
         self.root.resizable(False, False)
@@ -532,6 +774,8 @@ class UnifiedApp:
 
         self.set_mode("LAN")
         self.root.protocol("WM_DELETE_WINDOW", self.on_close)
+        if self.lan_only:
+            self.root.after(150, lambda: messagebox.showinfo(self.tr("app_title_offline", version=APP_VERSION), self.tr("offline_notice")))
 
     # ============ UI safe ============
     def ui(self, fn, *args, **kwargs):
@@ -541,11 +785,19 @@ class UnifiedApp:
     def ui_warn(self, t, m): self.ui(messagebox.showwarning, t, m)
     def ui_error(self, t, m): self.ui(messagebox.showerror, t, m)
 
+    def tr(self, key: str, **kwargs):
+        catalog = TEXTS.get(self.language, TEXTS["en"])
+        template = catalog.get(key) or TEXTS["en"].get(key) or key
+        try:
+            return template.format(**kwargs)
+        except Exception:
+            return template
+
     # ============ 표시 문구 ============
     def make_multi_display_name(self, first_name: str, file_count: int) -> str:
-        first_name = first_name or "파일"
+        first_name = first_name or self.tr("display_file_default")
         if file_count and file_count > 1:
-            return f"{first_name} 외 {file_count-1}개"
+            return self.tr("display_more_files", name=first_name, count=file_count-1)
         return first_name
 
     # ================= GUI =================
@@ -556,22 +808,28 @@ class UnifiedApp:
         left = ttk.Frame(frame_info)
         left.pack(side=tk.LEFT, fill=tk.X, expand=True)
 
-        ttk.Label(left, text=f"🖥️ IP: {self.my_ip}", font=("Helvetica", 10, "bold")).pack(anchor="w")
-        ttk.Label(left, text=f"💾 이름: {self.my_name}").pack(anchor="w")
-        self.mode_status = tk.StringVar(value="LAN 모드")
+        ttk.Label(left, text=self.tr("label_ip", ip=self.my_ip), font=("Helvetica", 10, "bold")).pack(anchor="w")
+        ttk.Label(left, text=self.tr("label_name", name=self.my_name)).pack(anchor="w")
+        self.mode_status = tk.StringVar(value=self.tr("mode_lan"))
         ttk.Label(left, textvariable=self.mode_status, foreground="gray").pack(anchor="w", pady=(2, 0))
+        if self.lan_only:
+            ttk.Label(left, text=self.tr("offline_notice"), foreground="gray").pack(anchor="w", pady=(2, 0))
 
         right = ttk.Frame(frame_info)
         right.pack(side=tk.RIGHT)
 
-        self.mode_btn = ttk.Button(right, text="🌐 터널 접속", command=self.toggle_mode, cursor="hand2")
-        self.mode_btn.pack(anchor="e")
+        self.mode_btn = None
+        if not self.lan_only:
+            self.mode_btn = ttk.Button(right, text=self.tr("button_tunnel"), command=self.toggle_mode, cursor="hand2")
+            self.mode_btn.pack(anchor="e")
+        else:
+            ttk.Label(right, text=f"📡 {self.tr('offline_badge')}", foreground="gray").pack(anchor="e")
 
         # ===== 터널 설정 프레임 =====
-        self.tunnel_frame = ttk.LabelFrame(self.root, text="🌐 터널 설정", padding=10)
+        self.tunnel_frame = ttk.LabelFrame(self.root, text=self.tr("tunnel_settings"), padding=10)
 
         r1 = ttk.Frame(self.tunnel_frame); r1.pack(fill=tk.X, pady=2)
-        ttk.Label(r1, text="서버 주소(Host:Port)").pack(side=tk.LEFT)
+        ttk.Label(r1, text=self.tr("server_host")).pack(side=tk.LEFT)
         self.host_entry = ttk.Entry(r1)
         self.host_entry.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=6)
         self.host_entry.insert(0, self.tunnel_host)
@@ -581,18 +839,18 @@ class UnifiedApp:
         self.ssl_chk.pack(side=tk.LEFT, padx=(4, 0))
 
         r2 = ttk.Frame(self.tunnel_frame); r2.pack(fill=tk.X, pady=2)
-        ttk.Label(r2, text="TOKEN").pack(side=tk.LEFT)
+        ttk.Label(r2, text=self.tr("token")).pack(side=tk.LEFT)
         self.token_entry = ttk.Entry(r2, show="*")
         self.token_entry.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=6)
         self.token_entry.insert(0, self.tunnel_token)
 
         r3 = ttk.Frame(self.tunnel_frame); r3.pack(fill=tk.X, pady=(6, 0))
-        ttk.Button(r3, text="🔄 적용/재연결", command=self.apply_tunnel_settings).pack(side=tk.LEFT)
-        self.tunnel_status = tk.StringVar(value="(터널 미접속)")
+        ttk.Button(r3, text=self.tr("apply_reconnect"), command=self.apply_tunnel_settings).pack(side=tk.LEFT)
+        self.tunnel_status = tk.StringVar(value=self.tr("tunnel_disconnected"))
         ttk.Label(r3, textvariable=self.tunnel_status, foreground="gray").pack(side=tk.RIGHT)
 
         # ===== 장치 목록 =====
-        self.frame_devices = ttk.LabelFrame(self.root, text="📡 장치 목록(LAN)", padding=10)
+        self.frame_devices = ttk.LabelFrame(self.root, text=self.tr("devices_lan"), padding=10)
         self.frame_devices.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
 
         top_frame = ttk.Frame(self.frame_devices)
@@ -602,15 +860,15 @@ class UnifiedApp:
         ttk.Scrollbar(top_frame, orient="vertical", command=self.device_list.yview).pack(side=tk.RIGHT, fill=tk.Y)
         self.device_list.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
-        ttk.Button(top_frame, text="🔄", command=self.manual_update, width=2, cursor="hand2").pack(side=tk.RIGHT, padx=5)
+        ttk.Button(top_frame, text=self.tr("button_refresh"), command=self.manual_update, width=2, cursor="hand2").pack(side=tk.RIGHT, padx=5)
 
         # ===== 액션 =====
         frame_actions = ttk.Frame(self.root, padding=10)
         frame_actions.pack(fill=tk.X)
-        ttk.Button(frame_actions, text="📁 저장 폴더", command=self.set_save_folder).pack(side=tk.LEFT, padx=5)
-        ttk.Button(frame_actions, text="📤 전송", command=self.send_file_prompt).pack(side=tk.LEFT, padx=5)
+        ttk.Button(frame_actions, text=self.tr("button_save_folder"), command=self.set_save_folder).pack(side=tk.LEFT, padx=5)
+        ttk.Button(frame_actions, text=self.tr("button_send"), command=self.send_file_prompt).pack(side=tk.LEFT, padx=5)
 
-        self.save_path_label = ttk.Label(frame_actions, text=f"💾 저장: {self.file_save_path}", foreground="gray")
+        self.save_path_label = ttk.Label(frame_actions, text=self.tr("save_path", path=self.file_save_path), foreground="gray")
         self.save_path_label.pack(side=tk.RIGHT, padx=10)
 
         # ===== Progress UI =====
@@ -620,7 +878,7 @@ class UnifiedApp:
         self.indiv_progress_frame = ttk.Frame(self.progress_frame)
         self.indiv_progress_frame.pack(fill=tk.X)
 
-        self.indiv_label = ttk.Label(self.indiv_progress_frame, text="파일: -", font=("Helvetica", 9))
+        self.indiv_label = ttk.Label(self.indiv_progress_frame, text=self.tr("file_label"), font=("Helvetica", 9))
         self.indiv_label.pack(anchor="w")
 
         top_row = ttk.Frame(self.indiv_progress_frame)
@@ -633,7 +891,7 @@ class UnifiedApp:
         self.indiv_pct_label = ttk.Label(top_row, text="0%", font=("Helvetica", 9, "bold"))
         self.indiv_pct_label.pack(side=tk.RIGHT)
 
-        self.total_label = ttk.Label(self.progress_frame, text="전체 진행: 0 / 0", font=("Helvetica", 9, "bold"))
+        self.total_label = ttk.Label(self.progress_frame, text=self.tr("total_progress"), font=("Helvetica", 9, "bold"))
         self.total_label.pack(anchor="w", pady=(5, 0))
 
         self.bottom_row = ttk.Frame(self.progress_frame)
@@ -646,11 +904,11 @@ class UnifiedApp:
         self.total_pct_label = ttk.Label(self.bottom_row, text="0%", font=("Helvetica", 9, "bold"))
         self.total_pct_label.pack(side=tk.RIGHT)
 
-        self.speed_label = ttk.Label(self.progress_frame, text="속도: 0 MB/s | 남은 시간: --:--", foreground="gray")
+        self.speed_label = ttk.Label(self.progress_frame, text=self.tr("speed_eta"), foreground="gray")
         self.speed_label.pack(anchor="e", pady=2)
 
         self.cancel_frame = ttk.Frame(self.progress_frame)
-        self.cancel_button = ttk.Button(self.cancel_frame, text="❌ 전송 중단", command=self.cancel_transfer, width=15)
+        self.cancel_button = ttk.Button(self.cancel_frame, text=self.tr("cancel_transfer"), command=self.cancel_transfer, width=15)
         self.cancel_button.pack()
         self.cancel_frame.pack(pady=5)
         self.cancel_frame.pack_forget()
@@ -659,21 +917,27 @@ class UnifiedApp:
 
     # ================= 모드 전환 =================
     def toggle_mode(self):
+        if self.lan_only:
+            return
         self.set_mode("TUNNEL" if self.mode == "LAN" else "LAN")
 
     def set_mode(self, mode: str):
+        if self.lan_only:
+            mode = "LAN"
         self.mode = mode
 
         if mode == "LAN":
-            self.mode_status.set("LAN 모드")
-            self.mode_btn.config(text="🌐 터널 접속")
-            self.frame_devices.config(text="📡 장치 목록(LAN)")
+            self.mode_status.set(self.tr("mode_lan"))
+            if self.mode_btn:
+                self.mode_btn.config(text=self.tr("button_tunnel"))
+            self.frame_devices.config(text=self.tr("devices_lan"))
             self.tunnel_frame.pack_forget()
             self.refresh_device_list_lan()
         else:
-            self.mode_status.set("터널 모드")
-            self.mode_btn.config(text="📡 LAN 통신")
-            self.frame_devices.config(text="🌐 터널 PC 목록")
+            self.mode_status.set(self.tr("mode_tunnel"))
+            if self.mode_btn:
+                self.mode_btn.config(text=self.tr("button_lan"))
+            self.frame_devices.config(text=self.tr("devices_tunnel"))
             self.tunnel_frame.pack(fill=tk.X, padx=10, pady=(0, 5))
             self.start_tunnel_stack()
 
@@ -722,11 +986,11 @@ class UnifiedApp:
         self.tunnel_client.set_status_callback(self._on_tunnel_status)
         self.tunnel_client.start()
 
-        self.ui_info("적용", f"적용 완료:\nWS={self.tunnel_ws_url}\nHEALTH={self.tunnel_admin_base}/_health?token=***")
+        self.ui_info(self.tr("applied_title"), self.tr("applied_message", ws=self.tunnel_ws_url, health=self.tunnel_admin_base))
 
     def _on_tunnel_status(self, kind: str, data: Any):
         if kind == "ws_connected":
-            self.ui(self.tunnel_status.set, "WS 연결됨(등록 중...)")
+            self.ui(self.tunnel_status.set, self.tr("status_ws_connected"))
         elif kind == "registered":
             port = 0
             try:
@@ -734,15 +998,15 @@ class UnifiedApp:
             except Exception:
                 port = 0
             if port:
-                self.ui(self.tunnel_status.set, f"등록 완료 ✅ (내 {TUNNEL_TCP_NAME} 포트: {port})")
+                self.ui(self.tunnel_status.set, self.tr("status_registered_port", name=TUNNEL_TCP_NAME, port=port))
             else:
-                self.ui(self.tunnel_status.set, f"등록 완료 ✅ ({TUNNEL_TCP_NAME} 포트 없음?)")
+                self.ui(self.tunnel_status.set, self.tr("status_registered_missing_port", name=TUNNEL_TCP_NAME))
         elif kind == "register_failed":
-            self.ui(self.tunnel_status.set, f"등록 실패 ❌ ({(data or {}).get('reason')})")
+            self.ui(self.tunnel_status.set, self.tr("status_register_failed", reason=(data or {}).get("reason")))
         elif kind == "ws_error":
-            self.ui(self.tunnel_status.set, f"오류: {(data or {}).get('error')}")
+            self.ui(self.tunnel_status.set, self.tr("status_error", error=(data or {}).get("error")))
         elif kind == "ws_disconnected":
-            self.ui(self.tunnel_status.set, "WS 끊김(재시도 중...)")
+            self.ui(self.tunnel_status.set, self.tr("status_ws_retrying"))
 
     def _tunnel_poll_loop(self):
         while self.running:
@@ -754,7 +1018,7 @@ class UnifiedApp:
                     self.ui(self.refresh_device_list_tunnel)
             except Exception as e:
                 if self.mode == "TUNNEL":
-                    self.ui(self.tunnel_status.set, f"피어 조회 실패(/_health): {e}")
+                    self.ui(self.tunnel_status.set, self.tr("status_peer_fetch_health_failed", error=e))
             time.sleep(POLL_INTERVAL_SEC)
 
     def refresh_device_list_tunnel(self):
@@ -780,7 +1044,7 @@ class UnifiedApp:
         path = filedialog.askdirectory(initialdir=self.file_save_path)
         if path:
             self.file_save_path = path
-            self.save_path_label.config(text=f"💾 저장: {self.file_save_path}")
+            self.save_path_label.config(text=self.tr("save_path", path=self.file_save_path))
 
     def hide_progress(self):
         self.progress_frame.pack_forget()
@@ -788,9 +1052,9 @@ class UnifiedApp:
         self.total_var.set(0)
         self.indiv_pct_label.config(text="0%")
         self.total_pct_label.config(text="0%")
-        self.speed_label.config(text="속도: 0 MB/s | 남은 시간: --:--")
-        self.indiv_label.config(text="파일: -")
-        self.total_label.config(text="전체 진행: 0 / 0")
+        self.speed_label.config(text=self.tr("speed_eta"))
+        self.indiv_label.config(text=self.tr("file_label"))
+        self.total_label.config(text=self.tr("total_progress"))
         self.cancel_frame.pack_forget()
 
     def show_progress(self, display_title, total_size, is_receiving=False, hide_indiv=False):
@@ -810,27 +1074,31 @@ class UnifiedApp:
         self.speed_label.pack(anchor="e", pady=2)
         self.cancel_frame.pack(pady=5)
 
-        self.indiv_label.config(text=f"{display_title} {'수신 중...' if is_receiving else '진행 중...'}")
+        self.indiv_label.config(
+            text=self.tr("progress_receiving", title=display_title)
+            if is_receiving
+            else self.tr("progress_running", title=display_title)
+        )
         self.indiv_var.set(0)
         self.indiv_pct_label.config(text="0%")
 
         self.total_size = int(total_size)
         self.total_bytes_sent = 0
         self.start_time_total = time.time()
-        self.total_label.config(text=f"전체 진행: 0 / {human_readable_size(self.total_size)}")
+        self.total_label.config(text=self.tr("total_progress_current", current="0", total=human_readable_size(self.total_size)))
         self.total_var.set(0)
         self.total_pct_label.config(text="0%")
-        self.speed_label.config(text="속도: 0 MB/s | 남은 시간: --:--")
+        self.speed_label.config(text=self.tr("speed_eta"))
 
     def format_time(self, seconds):
         seconds = max(0, seconds)
         if seconds < 60:
-            return f"{int(seconds)}초"
+            return self.tr("time_seconds", seconds=int(seconds))
         if seconds < 3600:
-            return f"{int(seconds // 60)}분 {int(seconds % 60)}초"
+            return self.tr("time_minutes", minutes=int(seconds // 60), seconds=int(seconds % 60))
         h = int(seconds // 3600)
         m = int((seconds % 3600) // 60)
-        return f"{h}시간 {m}분"
+        return self.tr("time_hours", hours=h, minutes=m)
 
     def update_progress(self, chunk_size, file_done, file_size, hide_indiv=False):
         self.total_bytes_sent += int(chunk_size)
@@ -843,8 +1111,14 @@ class UnifiedApp:
         total_percent = min(100.0, (self.total_bytes_sent / self.total_size) * 100.0) if self.total_size > 0 else 100.0
         self.total_var.set(total_percent)
         self.total_pct_label.config(text=f"{total_percent:.1f}%")
-        self.total_label.config(text=f"전체 진행: {human_readable_size(self.total_bytes_sent)} / {human_readable_size(self.total_size)}")
-        self.speed_label.config(text=f"속도: {speed_mb:.2f} MB/s | 남은 시간: {self.format_time(remaining_sec)}")
+        self.total_label.config(
+            text=self.tr(
+                "total_progress_current",
+                current=human_readable_size(self.total_bytes_sent),
+                total=human_readable_size(self.total_size),
+            )
+        )
+        self.speed_label.config(text=self.tr("speed_eta_current", speed=speed_mb, time=self.format_time(remaining_sec)))
 
         if not hide_indiv:
             indiv_percent = min(100.0, (file_done / file_size) * 100.0) if file_size > 0 else 100.0
@@ -928,7 +1202,7 @@ class UnifiedApp:
                 self.tunnel_peers = peers
                 self.refresh_device_list_tunnel()
             except Exception as e:
-                self.tunnel_status.set(f"피어 조회 실패: {e}")
+                self.tunnel_status.set(self.tr("status_peer_fetch_failed", error=e))
 
     def cleanup_devices(self):
         now = time.time()
@@ -973,7 +1247,7 @@ class UnifiedApp:
             s.bind(("127.0.0.1", LOCAL_FILE_PORT))
             s.listen(10)
         except Exception as e:
-            self.ui_error("오류", f"터널 로컬 수신 서버 바인드 실패: 127.0.0.1:{LOCAL_FILE_PORT}\n{e}")
+            self.ui_error(self.tr("error_title"), self.tr("error_tunnel_bind", port=LOCAL_FILE_PORT, error=e))
             return
 
         while self.running:
@@ -997,22 +1271,28 @@ class UnifiedApp:
                 mtype = msg.get("type")
 
                 if mtype == "REQUEST_SEND":
-                    display_name = msg.get("display_name", msg.get("filename", "파일"))
+                    display_name = msg.get("display_name", msg.get("filename", self.tr("display_file_default")))
                     sender_name = msg.get("name", "Unknown")
                     sender_ip = msg.get("ip", "?")
                     payload_size = int(msg.get("size", 0))
 
                     total_size_str = human_readable_size(payload_size)
                     answer = messagebox.askyesno(
-                        "파일 수신 요청",
-                        f"[{sender_name}({sender_ip})]가 {display_name} ({total_size_str})를 보내려 합니다.\n수신하시겠습니까?"
+                        self.tr("receive_request_title"),
+                        self.tr(
+                            "receive_request_body",
+                            sender_name=sender_name,
+                            sender_ip=sender_ip,
+                            display_name=display_name,
+                            size=total_size_str,
+                        ),
                     )
                     try:
                         if answer:
                             send_msg(client, {"type": "ACCEPT"})
                         else:
                             send_msg(client, {"type": "REJECT"})
-                            self.ui_info("거절됨", "수신이 거절되었습니다.")
+                            self.ui_info(self.tr("reject_title"), self.tr("reject_receive"))
                             return
                     except Exception:
                         return
@@ -1066,19 +1346,19 @@ class UnifiedApp:
                 pass
 
     def _build_receive_done_message(self, base_path, saved_files, extracted_files=None):
-        lines = [f"저장 위치: {base_path}"]
+        lines = [self.tr("save_location", path=base_path)]
         if saved_files:
-            lines += ["", "[저장된 파일]"]
+            lines += ["", self.tr("saved_files")]
             for x in saved_files[:30]:
                 lines.append(f"- {os.path.basename(x)}")
             if len(saved_files) > 30:
-                lines.append(f"... 외 {len(saved_files)-30}개")
+                lines.append(self.tr("and_more", count=len(saved_files)-30))
         if extracted_files:
-            lines += ["", "[추출된 파일]"]
+            lines += ["", self.tr("extracted_files")]
             for x in extracted_files[:30]:
                 lines.append(f"- {x}")
             if len(extracted_files) > 30:
-                lines.append(f"... 외 {len(extracted_files)-30}개")
+                lines.append(self.tr("and_more", count=len(extracted_files)-30))
         return "\n".join(lines)
 
     def receive_single_file(self, sock, filename, file_size, is_zip=False, file_count=1):
@@ -1117,13 +1397,13 @@ class UnifiedApp:
         if self.root.cancel_flag:
             self.ui(self.hide_progress)
             self._delete_paths_safely(saved_paths)
-            self.ui_info("중단", "수신을 중단했습니다. (부분 파일 삭제 완료)")
+            self.ui_info(self.tr("cancel_title"), self.tr("receive_cancelled_partial"))
             return
 
         if interrupted or total < file_size:
             self.ui(self.hide_progress)
             self._delete_paths_safely(saved_paths)
-            self.ui_info("중단", "전송측에서 전송을 중단했습니다. (미완료 파일 삭제 완료)")
+            self.ui_info(self.tr("cancel_title"), self.tr("sender_cancelled_partial"))
             return
 
         if is_zip:
@@ -1149,7 +1429,7 @@ class UnifiedApp:
             saved_for_msg if not is_zip else [],
             extracted_list if is_zip else None
         )
-        self.ui_info("완료", msg)
+        self.ui_info(self.tr("done_title"), msg)
 
     def receive_multi_files(self, sock, total_size, file_count):
         self.root.cancel_flag = False
@@ -1165,7 +1445,7 @@ class UnifiedApp:
                 sock.close()
             except Exception:
                 pass
-            self.ui_error("오류", "다중 파일 메타데이터 수신 실패")
+            self.ui_error(self.tr("error_title"), self.tr("multi_meta_failed"))
             return
 
         files = meta.get("files", [])
@@ -1174,10 +1454,10 @@ class UnifiedApp:
                 sock.close()
             except Exception:
                 pass
-            self.ui_error("오류", "다중 파일 메타데이터가 올바르지 않습니다.")
+            self.ui_error(self.tr("error_title"), self.tr("multi_meta_invalid"))
             return
 
-        self.ui(self.show_progress, "다중 파일", total_size, True, False)
+        self.ui(self.show_progress, self.tr("multi_files"), total_size, True, False)
 
         try:
             for idx, info in enumerate(files, 1):
@@ -1190,7 +1470,7 @@ class UnifiedApp:
                 save_path = self._prepare_unique_path(download_dir, fname)
                 saved_paths.append(save_path)
 
-                self.ui(self.indiv_label.config, text=f"파일 {fname} ({idx}/{file_count}) 수신 중...")
+                self.ui(self.indiv_label.config, text=self.tr("receiving_file_indexed", name=fname, index=idx, count=file_count))
                 self.ui(self.indiv_var.set, 0)
                 self.ui(self.indiv_pct_label.config, text="0%")
 
@@ -1219,30 +1499,30 @@ class UnifiedApp:
         if self.root.cancel_flag:
             self.ui(self.hide_progress)
             self._delete_paths_safely(saved_paths)
-            self.ui_info("중단", "수신을 중단했습니다. (이번 전송 파일 삭제 완료)")
+            self.ui_info(self.tr("cancel_title"), self.tr("receive_cancelled_batch"))
             return
 
         if interrupted:
             self.ui(self.hide_progress)
             self._delete_paths_safely(saved_paths)
-            self.ui_info("중단", "전송측에서 전송을 중단했습니다. (미완료/이번 전송 파일 삭제 완료)")
+            self.ui_info(self.tr("cancel_title"), self.tr("sender_cancelled_batch"))
             return
 
         self.ui(self.hide_progress)
         msg = self._build_receive_done_message(download_dir, saved_paths, None)
-        self.ui_info("완료", msg)
+        self.ui_info(self.tr("done_title"), msg)
 
     # ================== 송신 (LAN/Tunnel 분기) ==================
     def send_file_prompt(self):
         self.root.cancel_flag = False
         sel = self.device_list.curselection()
         if not sel:
-            self.ui_warn("오류", "전송할 대상을 선택하세요.")
+            self.ui_warn(self.tr("error_title"), self.tr("select_target_first"))
             return
 
-        paths = list(filedialog.askopenfilenames(title="전송할 파일 선택 (다중 가능)"))
+        paths = list(filedialog.askopenfilenames(title=self.tr("select_files_title")))
         if not paths:
-            self.ui_warn("파일 없음", "파일을 선택해주세요.")
+            self.ui_warn(self.tr("no_files_title"), self.tr("no_files_body"))
             return
 
         filenames = [os.path.basename(p) for p in paths]
@@ -1250,8 +1530,8 @@ class UnifiedApp:
 
         if file_count > 1:
             use_zip = messagebox.askyesnocancel(
-                "압축 선택",
-                "파일을 ZIP으로 압축하여 전송하시겠습니까?\n\n예: ZIP 압축 (단일 ZIP 전송)\n아니오: 원본 그대로(다중 파일) 전송"
+                self.tr("zip_choice_title"),
+                self.tr("zip_choice_body"),
             )
             if use_zip is None:
                 return
@@ -1263,7 +1543,7 @@ class UnifiedApp:
         if self.mode == "LAN":
             ip = list(self.devices.keys())[sel[0]] if sel[0] < len(self.devices) else None
             if not ip:
-                self.ui_error("오류", "대상 장치를 찾을 수 없습니다.")
+                self.ui_error(self.tr("error_title"), self.tr("target_device_missing"))
                 return
             threading.Thread(
                 target=self._send_via_lan,
@@ -1274,14 +1554,14 @@ class UnifiedApp:
             target_sub = self.tunnel_peer_order[sel[0]] if sel[0] < len(self.tunnel_peer_order) else None
             peer = self.tunnel_peers.get(target_sub)
             if not peer:
-                self.ui_error("오류", "대상 터널 정보를 찾을 수 없습니다.")
+                self.ui_error(self.tr("error_title"), self.tr("target_tunnel_missing"))
                 return
             try:
                 target_port = int(peer.get("file_port") or 0)
             except Exception:
                 target_port = 0
             if not target_port:
-                self.ui_error("오류", f"대상 {TUNNEL_TCP_NAME} 포트가 없습니다.")
+                self.ui_error(self.tr("error_title"), self.tr("target_tunnel_port_missing", name=TUNNEL_TCP_NAME))
                 return
             threading.Thread(
                 target=self._send_via_tunnel,
@@ -1291,7 +1571,7 @@ class UnifiedApp:
 
     def _zip_with_progress(self, zip_path, file_paths):
         total_src = sum(os.path.getsize(p) for p in file_paths)
-        self.ui(self.show_progress, "ZIP 압축", total_src, False, False)
+        self.ui(self.show_progress, self.tr("zip_prepare"), total_src, False, False)
 
         try:
             with zipfile.ZipFile(zip_path, "w", compression=zipfile.ZIP_DEFLATED) as zf:
@@ -1302,7 +1582,7 @@ class UnifiedApp:
                     fsize = os.path.getsize(p)
                     done_file = 0
 
-                    self.ui(self.indiv_label.config, text=f"압축 중: {arc} ({idx}/{len(file_paths)})")
+                    self.ui(self.indiv_label.config, text=self.tr("compressing_file", name=arc, index=idx, count=len(file_paths)))
                     self.ui(self.indiv_var.set, 0)
                     self.ui(self.indiv_pct_label.config, text="0%")
 
@@ -1336,7 +1616,7 @@ class UnifiedApp:
         if use_zip:
             try:
                 base = os.path.splitext(filenames[0])[0]
-                zip_name = safe_name(f"{base}_외_{file_count-1}개.zip")
+                zip_name = safe_name(self.tr("zip_bundle_name", name=base, count=file_count-1))
                 temp_zip_path = tempfile.NamedTemporaryFile(suffix=".zip", delete=False).name
                 self._zip_with_progress(temp_zip_path, paths)
                 payload_paths = [temp_zip_path]
@@ -1344,11 +1624,11 @@ class UnifiedApp:
                 payload_filename = zip_name
             except RuntimeError:
                 self._cleanup_temp_zip(temp_zip_path)
-                self.ui_info("중단", "압축을 중단했습니다.")
+                self.ui_info(self.tr("cancel_title"), self.tr("zip_cancelled"))
                 return
             except Exception as e:
                 self._cleanup_temp_zip(temp_zip_path)
-                self.ui_error("압축 실패", f"ZIP 압축 실패: {e}")
+                self.ui_error(self.tr("zip_failed_title"), self.tr("zip_failed_body", error=e))
                 return
         else:
             payload_paths = paths[:]
@@ -1380,21 +1660,21 @@ class UnifiedApp:
                 except:
                     pass
                 self._cleanup_temp_zip(temp_zip_path)
-                self.ui_info("거절됨", "상대방이 전송을 거절했습니다.")
+                self.ui_info(self.tr("reject_title"), self.tr("peer_rejected"))
             else:
                 try:
                     sock.close()
                 except:
                     pass
                 self._cleanup_temp_zip(temp_zip_path)
-                self.ui_warn("응답 없음", "서버 응답 없음")
+                self.ui_warn(self.tr("error_title"), self.tr("server_no_response"))
         except Exception as e:
             try:
                 sock.close()
             except:
                 pass
             self._cleanup_temp_zip(temp_zip_path)
-            self.ui_error("연결 오류", f"연결 실패: {e}")
+            self.ui_error(self.tr("connection_error_title"), self.tr("connection_error_body", error=e))
 
     def _send_via_tunnel(self, target_port, paths, filenames, file_count, use_zip, display_name):
         self.tunnel_ws_url, self.tunnel_admin_base, self.tunnel_server_host = build_urls(self.tunnel_host, self.tunnel_ssl)
@@ -1403,7 +1683,7 @@ class UnifiedApp:
         if use_zip:
             try:
                 base = os.path.splitext(filenames[0])[0]
-                zip_name = safe_name(f"{base}_외_{file_count-1}개.zip")
+                zip_name = safe_name(self.tr("zip_bundle_name", name=base, count=file_count-1))
                 temp_zip_path = tempfile.NamedTemporaryFile(suffix=".zip", delete=False).name
                 self._zip_with_progress(temp_zip_path, paths)
                 payload_paths = [temp_zip_path]
@@ -1411,11 +1691,11 @@ class UnifiedApp:
                 payload_filename = zip_name
             except RuntimeError:
                 self._cleanup_temp_zip(temp_zip_path)
-                self.ui_info("중단", "압축을 중단했습니다.")
+                self.ui_info(self.tr("cancel_title"), self.tr("zip_cancelled"))
                 return
             except Exception as e:
                 self._cleanup_temp_zip(temp_zip_path)
-                self.ui_error("압축 실패", f"ZIP 압축 실패: {e}")
+                self.ui_error(self.tr("zip_failed_title"), self.tr("zip_failed_body", error=e))
                 return
         else:
             payload_paths = paths[:]
@@ -1448,21 +1728,21 @@ class UnifiedApp:
                 except:
                     pass
                 self._cleanup_temp_zip(temp_zip_path)
-                self.ui_info("거절됨", "상대방이 전송을 거절했습니다.")
+                self.ui_info(self.tr("reject_title"), self.tr("peer_rejected"))
             else:
                 try:
                     sock.close()
                 except:
                     pass
                 self._cleanup_temp_zip(temp_zip_path)
-                self.ui_warn("응답 없음", "상대방 응답 없음")
+                self.ui_warn(self.tr("error_title"), self.tr("peer_no_response"))
         except Exception as e:
             try:
                 sock.close()
             except:
                 pass
             self._cleanup_temp_zip(temp_zip_path)
-            self.ui_error("연결 오류", f"연결 실패: {e}")
+            self.ui_error(self.tr("connection_error_title"), self.tr("connection_error_body", error=e))
 
     def _start_transfer(self, sock, paths, display_name, payload_filename, payload_size,
                         use_zip=False, file_count=1, temp_zip_path=None):
@@ -1499,7 +1779,7 @@ class UnifiedApp:
                 zip_path = paths[0]
                 zsize = os.path.getsize(zip_path)
                 sent = 0
-                self.ui(self.indiv_label.config, text=f"ZIP {os.path.basename(zip_path)} 전송 중...")
+                self.ui(self.indiv_label.config, text=self.tr("sending_zip", name=os.path.basename(zip_path)))
                 with open(zip_path, "rb") as f:
                     while sent < zsize and not self.root.cancel_flag:
                         chunk = f.read(BUFFER_SIZE)
@@ -1514,7 +1794,7 @@ class UnifiedApp:
                     p = paths[0]
                     fsize = os.path.getsize(p)
                     sent = 0
-                    self.ui(self.indiv_label.config, text=f"파일 {os.path.basename(p)} 전송 중...")
+                    self.ui(self.indiv_label.config, text=self.tr("sending_file", name=os.path.basename(p)))
                     with open(p, "rb") as f:
                         while sent < fsize and not self.root.cancel_flag:
                             chunk = f.read(BUFFER_SIZE)
@@ -1534,7 +1814,7 @@ class UnifiedApp:
                         fname = os.path.basename(p)
                         fsize = os.path.getsize(p)
 
-                        self.ui(self.indiv_label.config, text=f"파일 {fname} ({idx}/{file_count}) 전송 중...")
+                        self.ui(self.indiv_label.config, text=self.tr("sending_file_indexed", name=fname, index=idx, count=file_count))
                         self.ui(self.indiv_var.set, 0)
                         self.ui(self.indiv_pct_label.config, text="0%")
 
@@ -1559,9 +1839,9 @@ class UnifiedApp:
             self.active_mode = None
 
         if self.root.cancel_flag:
-            self.ui_info("중단", "전송이 중단되었습니다.")
+            self.ui_info(self.tr("cancel_title"), self.tr("transfer_cancelled"))
         else:
-            self.ui_info("완료", f"{display_name} 전송 완료!")
+            self.ui_info(self.tr("done_title"), self.tr("send_complete", name=display_name))
 
     # ======= 종료 =======
     def on_close(self):
@@ -1576,6 +1856,6 @@ class UnifiedApp:
 
 if __name__ == "__main__":
     root = tk.Tk()
-    app = UnifiedApp(root)
+    app = UnifiedApp(root, lan_only=os.getenv("PEERSEND_LAN_ONLY", "0").strip() in ("1", "true", "True", "yes", "Y", "y"))
     root.mainloop()
     app.running = False

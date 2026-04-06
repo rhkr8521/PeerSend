@@ -6,6 +6,8 @@ import socket
 import sys
 import threading
 import traceback
+import urllib.error
+import urllib.request
 import webbrowser
 from datetime import datetime
 from pathlib import Path
@@ -61,6 +63,35 @@ def _configure_embedded_logging() -> None:
         logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
 
 
+def _public_ui_available(browser_url: str, timeout: float = 2.5) -> bool:
+    try:
+        request = urllib.request.Request(browser_url, method="HEAD")
+        with urllib.request.urlopen(request, timeout=timeout) as response:
+            return 200 <= int(getattr(response, "status", 200)) < 400
+    except urllib.error.HTTPError as error:
+        if error.code in (401, 403, 405):
+            return True
+    except Exception:
+        pass
+    try:
+        request = urllib.request.Request(browser_url, method="GET")
+        with urllib.request.urlopen(request, timeout=timeout) as response:
+            return 200 <= int(getattr(response, "status", 200)) < 400
+    except Exception:
+        return False
+
+
+def _launch_lan_only_fallback() -> None:
+    import tkinter as tk
+
+    from p2p import UnifiedApp
+
+    root = tk.Tk()
+    fallback_app = UnifiedApp(root, lan_only=True)
+    root.mainloop()
+    fallback_app.running = False
+
+
 def main() -> None:
     host = os.getenv("PEERSEND_WEB_HOST", "127.0.0.1")
     port = int(os.getenv("PEERSEND_WEB_PORT", "8765"))
@@ -71,6 +102,12 @@ def main() -> None:
     should_open_browser = os.getenv("PEERSEND_OPEN_BROWSER", default_open_browser) == "1"
     if invoked_from_protocol:
         should_open_browser = os.getenv("PEERSEND_OPEN_BROWSER_ON_PROTOCOL", "0") == "1"
+
+    if not invoked_from_protocol and should_open_browser and not _public_ui_available(browser_url):
+        if _is_running(host, port):
+            return
+        _launch_lan_only_fallback()
+        return
 
     if _is_running(host, port):
         if should_open_browser:
