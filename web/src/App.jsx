@@ -113,6 +113,8 @@ const COPY = {
     yes: "예",
     no: "아니오",
     receive_files: "파일을 받으시겠습니까?",
+    preparing_transfer_title: "전송 준비중",
+    preparing_transfer_body: "상대방의 수신 확인을 기다리고 있습니다.",
     files_count: "{count}개 파일",
     file_count_one: "파일 1개",
     reject: "거절",
@@ -151,6 +153,10 @@ const COPY = {
     download_for_linux: "Linux 다운로드",
     apple_silicon: "Apple Silicon",
     intel: "Intel",
+    close: "닫기",
+    macos_download_guide_title: "macOS 설치 안내",
+    macos_download_guide_body:
+      "PeerSend.dmg 를 실행한후 PeerSend를 Applications에 복사하고 한번만 실행하면 설치가 완료됩니다.",
     open_peersend: "PeerSend 열기",
     go_home: "홈으로",
     downloads_ready: "다운로드 링크가 준비되면 여기에 표시됩니다.",
@@ -218,6 +224,8 @@ const COPY = {
     yes: "Yes",
     no: "No",
     receive_files: "Receive Files?",
+    preparing_transfer_title: "Preparing Transfer",
+    preparing_transfer_body: "Waiting for the receiver to confirm the transfer.",
     files_count: "{count} files",
     file_count_one: "1 file",
     reject: "Reject",
@@ -256,6 +264,10 @@ const COPY = {
     download_for_linux: "Download for Linux",
     apple_silicon: "Apple Silicon",
     intel: "Intel",
+    close: "Close",
+    macos_download_guide_title: "macOS Installation Guide",
+    macos_download_guide_body:
+      "Open PeerSend.dmg, copy PeerSend to Applications, then run it once to finish the installation.",
     open_peersend: "Open PeerSend",
     go_home: "Home",
     downloads_ready: "Download links will appear here when they are ready.",
@@ -515,6 +527,8 @@ export default function App() {
   const [toasts, setToasts] = useState([]);
   const [pendingFiles, setPendingFiles] = useState([]);
   const [showZipChoice, setShowZipChoice] = useState(false);
+  const [showTransferPreparing, setShowTransferPreparing] = useState(false);
+  const [transferPreparingSettled, setTransferPreparingSettled] = useState(false);
   const fileInputRef = useRef(null);
   const sessionIdRef = useRef(nextId());
   const reconnectTimerRef = useRef(null);
@@ -864,6 +878,16 @@ export default function App() {
     }
   }, [peers, selectedPeerId]);
 
+  useEffect(() => {
+    if (!showTransferPreparing || !transferPreparingSettled) {
+      return;
+    }
+    if (state.transferProgress || !state.isBusy) {
+      setShowTransferPreparing(false);
+      setTransferPreparingSettled(false);
+    }
+  }, [showTransferPreparing, transferPreparingSettled, state.isBusy, state.transferProgress]);
+
   function navigate(path, replace = false) {
     if (path === route) {
       return;
@@ -987,6 +1011,8 @@ export default function App() {
       formData.append("files", file, file.name);
     });
 
+    setShowTransferPreparing(true);
+    setTransferPreparingSettled(false);
     try {
       await apiRequest(backendOrigin, "/api/send-upload", {
         method: "POST",
@@ -994,7 +1020,12 @@ export default function App() {
       });
       setPendingFiles([]);
       setShowZipChoice(false);
+      window.setTimeout(() => {
+        setTransferPreparingSettled(true);
+      }, 1200);
     } catch (error) {
+      setShowTransferPreparing(false);
+      setTransferPreparingSettled(false);
       pushToast(error.message);
     }
   }
@@ -1414,6 +1445,12 @@ export default function App() {
         </Overlay>
       )}
 
+      {showTransferPreparing && (
+        <Overlay>
+          <LoadingModal title={t("preparing_transfer_title")} description={t("preparing_transfer_body")} />
+        </Overlay>
+      )}
+
       {state.pendingRequest && (
         <Overlay>
           <ModalCard
@@ -1519,6 +1556,16 @@ function LauncherScreen({ language, onRetry, onDownloads, stage }) {
 function DownloadPage({ language, route, engineConnected, onOpen, onRetry }) {
   const t = useMemo(() => createTranslator(language), [language]);
   const isMobilePage = route === MOBILE_DOWNLOAD_ROUTE;
+  const [macDownloadHref, setMacDownloadHref] = useState("");
+
+  function openMacDownloadGuide(href) {
+    if (!href) {
+      return;
+    }
+    window.location.assign(href);
+    setMacDownloadHref(href);
+  }
+
   const desktopCards = [
     {
       key: "windows",
@@ -1531,7 +1578,11 @@ function DownloadPage({ language, route, engineConnected, onOpen, onRetry }) {
       label: t("macos"),
       body: "Apple Silicon / Intel",
       actions: [
-        { label: t("apple_silicon"), href: downloadLink(DOWNLOAD_URLS.macosArm64) },
+        {
+          label: t("apple_silicon"),
+          href: downloadLink(DOWNLOAD_URLS.macosArm64),
+          onClick: () => openMacDownloadGuide(downloadLink(DOWNLOAD_URLS.macosArm64)),
+        },
         { label: t("intel"), href: downloadLink(DOWNLOAD_URLS.macosIntel), disabled: true },
       ],
     },
@@ -1614,6 +1665,19 @@ function DownloadPage({ language, route, engineConnected, onOpen, onRetry }) {
         </div>
         <Footer />
       </div>
+      {macDownloadHref ? (
+        <Overlay>
+          <ModalCard
+            title={t("macos_download_guide_title")}
+            description={t("macos_download_guide_body")}
+            actions={
+              <button className="primary-button" onClick={() => setMacDownloadHref("")}>
+                {t("close")}
+              </button>
+            }
+          />
+        </Overlay>
+      ) : null}
     </div>
   );
 }
@@ -1631,6 +1695,7 @@ function DownloadCard({ title, body, actions = [], fallbackLabel }) {
             key={`${title}-${index}-${action.label}`}
             href={action.href}
             disabled={action.disabled || !action.href}
+            onClick={action.onClick}
           >
             {action.disabled || !action.href ? action.label || fallbackLabel : action.label}
           </AnchorButton>
@@ -1640,12 +1705,26 @@ function DownloadCard({ title, body, actions = [], fallbackLabel }) {
   );
 }
 
-function AnchorButton({ href, disabled, children }) {
+function AnchorButton({ href, disabled, onClick, children }) {
   if (disabled || !href) {
     return (
       <span className="primary-button disabled-anchor" aria-disabled="true">
         {children}
       </span>
+    );
+  }
+  if (onClick) {
+    return (
+      <button
+        type="button"
+        className="primary-button anchor-button"
+        onClick={(event) => {
+          event.preventDefault();
+          onClick();
+        }}
+      >
+        {children}
+      </button>
     );
   }
   return (
@@ -1706,6 +1785,18 @@ function ModalCard({ title, description, actions }) {
         </p>
       </div>
       <div className="modal-actions">{actions}</div>
+    </div>
+  );
+}
+
+function LoadingModal({ title, description }) {
+  return (
+    <div className="modal-card loading-modal">
+      <div className="loading-spinner" aria-hidden="true" />
+      <div className="modal-copy">
+        <h2>{title}</h2>
+        <p>{description}</p>
+      </div>
     </div>
   );
 }
