@@ -65,8 +65,9 @@ def main() -> None:
     host = os.getenv("PEERSEND_WEB_HOST", "127.0.0.1")
     port = int(os.getenv("PEERSEND_WEB_PORT", "8765"))
     browser_url = os.getenv("PEERSEND_UI_URL", "https://send.peersend.kro.kr")
-    invoked_from_protocol = any(arg.startswith("peersend://") for arg in sys.argv[1:])
-    default_open_browser = "0" if sys.platform == "darwin" else "1"
+    launch_args = [arg for arg in sys.argv[1:] if not str(arg).startswith("-psn_")]
+    invoked_from_protocol = any(arg.startswith("peersend://") for arg in launch_args)
+    default_open_browser = "1"
     should_open_browser = os.getenv("PEERSEND_OPEN_BROWSER", default_open_browser) == "1"
     if invoked_from_protocol:
         should_open_browser = os.getenv("PEERSEND_OPEN_BROWSER_ON_PROTOCOL", "0") == "1"

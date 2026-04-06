@@ -10,7 +10,9 @@ const DOWNLOAD_URLS = {
   macosArm64:
     import.meta.env.VITE_PEERSEND_MACOS_ARM64_DOWNLOAD_URL ||
     "https://api-bucket.rhkr8521.com/peersend/download/macos/arm64/PeerSend.dmg",
-  macosIntel: import.meta.env.VITE_PEERSEND_MACOS_INTEL_DOWNLOAD_URL || "",
+  macosIntel:
+    import.meta.env.VITE_PEERSEND_MACOS_INTEL_DOWNLOAD_URL ||
+    "https://api-bucket.rhkr8521.com/peersend/download/macos/x64/PeerSend.dmg",
   linux: import.meta.env.VITE_PEERSEND_LINUX_DOWNLOAD_URL || "/downloads/PeerSend.AppImage",
   android:
     import.meta.env.VITE_PEERSEND_ANDROID_DOWNLOAD_URL ||
@@ -157,7 +159,7 @@ const COPY = {
     close: "닫기",
     macos_download_guide_title: "macOS 설치 안내",
     macos_download_guide_body:
-      "PeerSend.dmg 를 실행한후 PeerSend를 Applications에 복사하고 한번만 실행하면 설치가 완료됩니다.",
+      "PeerSend.dmg 를 실행한후 PeerSend를 Applications에 복사하면 설치가 완료됩니다.",
     open_peersend: "PeerSend 열기",
     go_home: "홈으로",
     downloads_ready: "다운로드 링크가 준비되면 여기에 표시됩니다.",
@@ -269,7 +271,7 @@ const COPY = {
     close: "Close",
     macos_download_guide_title: "macOS Installation Guide",
     macos_download_guide_body:
-      "Open PeerSend.dmg, copy PeerSend to Applications, then run it once to finish the installation.",
+      "Open PeerSend.dmg and copy PeerSend to Applications to complete the installation.",
     open_peersend: "Open PeerSend",
     go_home: "Home",
     downloads_ready: "Download links will appear here when they are ready.",
@@ -1178,7 +1180,6 @@ export default function App() {
             <div className="panel-header">
               <div>
                 <h2>{state.mode === "tunnel" ? t("tunnel_peers") : t("lan_peers")}</h2>
-                {state.mode === "tunnel" ? <p className="section-hint">{tunnelConnectionHint}</p> : null}
               </div>
               <button
               className="primary-button"
@@ -1572,7 +1573,11 @@ function DownloadPage({ language, route, engineConnected, onOpen, onRetry }) {
           href: downloadLink(DOWNLOAD_URLS.macosArm64),
           onClick: () => openMacDownloadGuide(downloadLink(DOWNLOAD_URLS.macosArm64)),
         },
-        { label: t("intel"), href: downloadLink(DOWNLOAD_URLS.macosIntel), disabled: true },
+        {
+          label: t("intel"),
+          href: downloadLink(DOWNLOAD_URLS.macosIntel),
+          onClick: () => openMacDownloadGuide(downloadLink(DOWNLOAD_URLS.macosIntel)),
+        },
       ],
     },
     {

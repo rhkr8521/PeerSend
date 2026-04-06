@@ -98,7 +98,7 @@ PYTHON_EXECUTABLE="$python_executable"
 
 cd "\$PAYLOAD_DIR"
 export PEERSEND_OPEN_BROWSER_ON_PROTOCOL=0
-export PEERSEND_OPEN_BROWSER=0
+export PEERSEND_OPEN_BROWSER=1
 exec "\$PYTHON_EXECUTABLE" "\$PAYLOAD_DIR/run_desktop_web.py" "\$@"
 EOF
   chmod +x "$launcher_path"
