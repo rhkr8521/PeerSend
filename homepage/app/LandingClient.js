@@ -354,6 +354,7 @@ export default function LandingClient({ initialLocale = "en" }) {
           <a href="#story">{content.nav.story}</a>
           <a href="#experience">{content.nav.experience}</a>
           <a href="#download">{content.nav.download}</a>
+          <a href={withLocalePath("/notice", locale)}>{content.nav.notice}</a>
         </nav>
         <a className="topbar-action" href={withLocalePath("/tunnel-server", locale)}>
           {content.nav.tunnelServer}
@@ -402,6 +403,9 @@ export default function LandingClient({ initialLocale = "en" }) {
           </a>
           <a href="#download" onClick={() => setMobileMenuOpen(false)}>
             {content.nav.download}
+          </a>
+          <a href={withLocalePath("/notice", locale)} onClick={() => setMobileMenuOpen(false)}>
+            {content.nav.notice}
           </a>
           <a href={withLocalePath("/tunnel-server", locale)} onClick={() => setMobileMenuOpen(false)}>
             {content.nav.tunnelServer}

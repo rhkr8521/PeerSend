@@ -1943,8 +1943,111 @@ a {
   overflow: hidden;
 }
 
+.docs-card-date {
+  margin: 0 0 12px;
+  color: rgba(255, 197, 98, 0.9);
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
 .docs-card-solo {
   margin-top: 16px;
+}
+
+.docs-section-compact {
+  margin-top: 18px;
+}
+
+.notice-board {
+  overflow: hidden;
+  border-radius: 22px;
+  border: 1px solid rgba(160, 190, 220, 0.08);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.notice-table-head,
+.notice-row {
+  display: grid;
+  grid-template-columns: 88px minmax(0, 1fr) 140px;
+  gap: 20px;
+  align-items: center;
+  padding: 18px 22px;
+}
+
+.notice-table-head {
+  border-bottom: 1px solid rgba(160, 190, 220, 0.08);
+  color: rgba(147, 166, 191, 0.82);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.notice-table-body {
+  display: grid;
+}
+
+.notice-row + .notice-row {
+  border-top: 1px solid rgba(160, 190, 220, 0.08);
+}
+
+.notice-col-number,
+.notice-col-date {
+  color: rgba(147, 166, 191, 0.82);
+  font-size: 0.92rem;
+}
+
+.notice-col-title {
+  min-width: 0;
+}
+
+.notice-col-title strong {
+  display: block;
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+.notice-col-title p {
+  margin: 6px 0 0;
+  color: rgba(147, 166, 191, 0.78);
+  font-size: 0.84rem;
+}
+
+.notice-empty {
+  padding: 72px 24px;
+  color: rgba(147, 166, 191, 0.82);
+  text-align: center;
+  font-size: 0.98rem;
+}
+
+.notice-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 20px 22px;
+  border-top: 1px solid rgba(160, 190, 220, 0.08);
+}
+
+.notice-page-button {
+  min-width: 42px;
+  height: 38px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(160, 190, 220, 0.14);
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(243, 246, 251, 0.92);
+  font: inherit;
+}
+
+.notice-page-button.is-active {
+  border-color: rgba(255, 197, 98, 0.3);
+  background: rgba(255, 197, 98, 0.12);
+  color: rgba(255, 244, 220, 0.98);
+}
+
+.notice-page-button:disabled {
+  opacity: 0.46;
 }
 
 .docs-footer {
@@ -2298,6 +2401,28 @@ a {
   .docs-card-solo {
     padding: 18px 16px;
     border-radius: 20px;
+  }
+
+  .notice-row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+    padding: 18px 16px;
+  }
+
+  .notice-empty {
+    padding: 56px 18px;
+    font-size: 0.94rem;
+  }
+
+  .notice-pagination {
+    gap: 8px;
+    padding: 18px 16px;
+  }
+
+  .notice-page-button {
+    min-width: 38px;
+    height: 36px;
+    padding: 0 12px;
   }
 
   .mobile-nav {

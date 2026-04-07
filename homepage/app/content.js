@@ -4,6 +4,7 @@ export const landingContent = {
       story: "소개",
       experience: "경험",
       download: "다운로드",
+      notice: "공지사항",
       tunnelServer: "나만의 터널 서버 만들기",
       menuOpen: "메뉴 열기",
       close: "닫기",
@@ -108,6 +109,7 @@ export const landingContent = {
       story: "Story",
       experience: "Experience",
       download: "Download",
+      notice: "Notice",
       tunnelServer: "Build Your Own Tunnel Server",
       menuOpen: "Open menu",
       close: "Close",
@@ -766,6 +768,47 @@ export const termsContent = {
         emphasisLast: true,
       },
     ],
+  },
+};
+
+export const noticeContent = {
+  ko: {
+    metaTitle: "PeerSend 공지사항",
+    metaDescription: "PeerSend 공지사항과 서비스 안내",
+    home: "홈으로",
+    tag: "Notice",
+    title: "공지사항",
+    intro: "PeerSend 서비스와 앱, 웹, 엔진 관련 주요 공지와 변경 사항을 안내합니다.",
+    columns: {
+      number: "번호",
+      title: "제목",
+      date: "등록일",
+    },
+    empty: "등록된 공지사항이 없습니다.",
+    pagination: {
+      prev: "이전",
+      next: "다음",
+    },
+    posts: [],
+  },
+  en: {
+    metaTitle: "PeerSend Notice",
+    metaDescription: "PeerSend notices and service updates",
+    home: "Home",
+    tag: "Notice",
+    title: "Notice",
+    intro: "This page shares major notices and updates about the PeerSend service, apps, web UI, and desktop engine.",
+    columns: {
+      number: "No.",
+      title: "Title",
+      date: "Date",
+    },
+    empty: "There are no notices yet.",
+    pagination: {
+      prev: "Prev",
+      next: "Next",
+    },
+    posts: [],
   },
 };
 
