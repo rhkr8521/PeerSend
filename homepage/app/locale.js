@@ -30,8 +30,11 @@ export function detectLocaleFromLanguage(value) {
 export function withLocalePath(path, locale) {
   const targetLocale = normalizeLocale(locale) || "en";
   const [base, hash = ""] = String(path || "").split("#");
-  const separator = base.includes("?") ? "&" : "?";
-  return `${base}${separator}lang=${targetLocale}${hash ? `#${hash}` : ""}`;
+  const [pathname, queryString = ""] = base.split("?");
+  const searchParams = new URLSearchParams(queryString);
+  searchParams.set("lang", targetLocale);
+  const nextQuery = searchParams.toString();
+  return `${pathname}${nextQuery ? `?${nextQuery}` : ""}${hash ? `#${hash}` : ""}`;
 }
 
 export function detectLocaleFromNavigator() {
