@@ -17,7 +17,7 @@ const DOWNLOAD_URLS = {
   android:
     import.meta.env.VITE_PEERSEND_ANDROID_DOWNLOAD_URL ||
     "https://play.google.com/store/apps/details?id=com.rhkr8521.p2ptransfer",
-  ios: import.meta.env.VITE_PEERSEND_IOS_DOWNLOAD_URL || "https://apps.apple.com/app/id0000000000",
+  ios: import.meta.env.VITE_PEERSEND_IOS_DOWNLOAD_URL || "https://apps.apple.com/app/id6761671034",
 };
 const LOCAL_HOSTS = new Set(["127.0.0.1", "localhost"]);
 const APP_ROUTE = "/";

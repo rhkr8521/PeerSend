@@ -90,7 +90,7 @@ export const landingContent = {
         {
           platform: "iOS",
           detail: "App Store",
-          href: "https://apps.apple.com/app/id0000000000",
+          href: "https://apps.apple.com/app/id6761671034",
           store: "apple",
         },
       ],
