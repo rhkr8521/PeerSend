@@ -2,6 +2,7 @@
 .gradle
 /local.properties
 /.idea/
+/Android/.idea/
 /.idea/caches
 /.idea/libraries
 /.idea/modules.xml
@@ -23,6 +24,9 @@ dist/
 web/dist/
 web/node_modules/
 node_modules/
+.next/
+homepage/.next/
+homepage/out/
 xcuserdata/
 *.xcuserstate
 web/.env.example
