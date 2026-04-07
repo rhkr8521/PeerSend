@@ -31,6 +31,11 @@ enum L10n {
     static var tunnelServerAddress: String { isKorean ? "서버 주소 (Host:Port)" : "Server Address (Host:Port)" }
     static var tunnelToken: String { "TOKEN" }
     static var sslEnabled: String { isKorean ? "SSL 사용" : "Use SSL" }
+    static var sslDisabledWarning: String {
+        isKorean
+            ? "SSL을 끄면 터널 토큰과 연결 정보가 네트워크에서 보호되지 않을 수 있습니다."
+            : "If you turn off SSL, your tunnel token and connection details may not be protected on the network."
+    }
     static var applyReconnect: String { isKorean ? "적용 및 재연결" : "Apply and Reconnect" }
     static var peerListLAN: String { isKorean ? "LAN 장치 목록" : "LAN Devices" }
     static var peerListTunnel: String { isKorean ? "터널 피어 목록" : "Tunnel Peers" }

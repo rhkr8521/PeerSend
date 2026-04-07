@@ -102,6 +102,7 @@ const COPY = {
     host: "서버 주소",
     token: "토큰",
     use_ssl: "SSL 사용",
+    ssl_disabled_warning: "SSL을 끄면 터널 토큰과 연결 정보가 네트워크에서 보호되지 않을 수 있습니다.",
     use_public_tunnel: "공개 터널 접속",
     apply_reconnect: "적용 및 재연결",
     my_subdomain: "내 서브도메인",
@@ -214,6 +215,7 @@ const COPY = {
     host: "Host",
     token: "Token",
     use_ssl: "Use SSL",
+    ssl_disabled_warning: "If you turn off SSL, your tunnel token and connection details may not be protected on the network.",
     use_public_tunnel: "Use Public Tunnel",
     apply_reconnect: "Apply & Reconnect",
     my_subdomain: "My Subdomain",
@@ -416,12 +418,13 @@ function parseTunnelPort(statusText, fallbackPort) {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
-async function apiRequest(origin, path, options = {}) {
+async function apiRequest(origin, path, options = {}, engineApiToken = "") {
   const response = await fetch(buildUrl(origin, path), {
     mode: "cors",
     ...options,
     headers: {
       ...(options.body instanceof FormData ? {} : { "Content-Type": "application/json" }),
+      ...(engineApiToken ? { "X-PeerSend-Engine-Token": engineApiToken } : {}),
       ...(options.headers || {}),
     },
   });
@@ -530,6 +533,7 @@ export default function App() {
   const [tunnelDirty, setTunnelDirty] = useState(false);
   const [toasts, setToasts] = useState([]);
   const [pendingFiles, setPendingFiles] = useState([]);
+  const [pendingSelectionId, setPendingSelectionId] = useState("");
   const [showZipChoice, setShowZipChoice] = useState(false);
   const [waitingForReceiverConfirm, setWaitingForReceiverConfirm] = useState(false);
   const [pendingSendNeedsPreparation, setPendingSendNeedsPreparation] = useState(false);
@@ -539,6 +543,7 @@ export default function App() {
   const launcherProbeTimerRef = useRef(null);
   const healthFailureCountRef = useRef(0);
   const [detectedEngineVersion, setDetectedEngineVersion] = useState("");
+  const [engineApiToken, setEngineApiToken] = useState("");
 
   const backendOrigin = isDirectEngineOrigin ? window.location.origin : LOCAL_ORIGIN;
   const engineLanguage = detectLanguage(state.language);
@@ -551,12 +556,19 @@ export default function App() {
   const t = useMemo(() => createTranslator(language), [language]);
   const peers = state.mode === "tunnel" ? state.tunnelPeers : state.lanPeers;
   const selectedPeer = peers.find((peer) => peer.id === selectedPeerId) || null;
-  const showApp = engineConnected && route === APP_ROUTE;
+  const showApp = engineConnected && Boolean(engineApiToken) && route === APP_ROUTE;
   const showTransferPreparing =
     waitingForReceiverConfirm &&
     !state.transferProgress &&
     state.isBusy &&
     (!pendingSendNeedsPreparation || pendingSendSawProgress);
+
+  function applyEngineBootstrap(engineInfo) {
+    setDetectedEngineVersion(String(engineInfo?.version || ""));
+    setEngineApiToken(String(engineInfo?.apiToken || ""));
+    setEngineConnected(true);
+    setLauncherStage("ready");
+  }
 
   useEffect(() => {
     document.title = t("app_name");
@@ -590,11 +602,6 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (isDirectEngineOrigin) {
-      setEngineConnected(true);
-      setLauncherStage("ready");
-      return undefined;
-    }
     if (isMobile) {
       setLauncherStage("mobile");
       return undefined;
@@ -602,7 +609,7 @@ export default function App() {
     if (route === MOBILE_DOWNLOAD_ROUTE) {
       return undefined;
     }
-    if (engineConnected) {
+    if (engineConnected && engineApiToken) {
       return undefined;
     }
 
@@ -625,10 +632,12 @@ export default function App() {
       const prelaunchInfo = await waitForEngine(ENGINE_PRELAUNCH_POLL_MS);
       if (prelaunchInfo?.ok) {
         if (!cancelled) {
-          setDetectedEngineVersion(String(prelaunchInfo.version || ""));
-          setEngineConnected(true);
-          setLauncherStage("ready");
+          applyEngineBootstrap(prelaunchInfo);
         }
+        return;
+      }
+
+      if (isDirectEngineOrigin) {
         return;
       }
 
@@ -640,9 +649,7 @@ export default function App() {
       const postlaunchInfo = await waitForEngine(ENGINE_POSTLAUNCH_POLL_MS);
       if (postlaunchInfo?.ok) {
         if (!cancelled) {
-          setDetectedEngineVersion(String(postlaunchInfo.version || ""));
-          setEngineConnected(true);
-          setLauncherStage("ready");
+          applyEngineBootstrap(postlaunchInfo);
         }
         return;
       }
@@ -657,7 +664,7 @@ export default function App() {
     return () => {
       cancelled = true;
     };
-  }, [engineConnected, isDirectEngineOrigin, isMobile, launchAttempt, route]);
+  }, [engineApiToken, engineConnected, isDirectEngineOrigin, isMobile, launchAttempt, route]);
 
   useEffect(() => {
     if (isDirectEngineOrigin || isMobile || engineConnected || route === MOBILE_DOWNLOAD_ROUTE) {
@@ -673,9 +680,7 @@ export default function App() {
       const engineInfo = await probeLocalEngine();
       if (engineInfo?.ok) {
         if (!cancelled) {
-          setDetectedEngineVersion(String(engineInfo.version || ""));
-          setEngineConnected(true);
-          setLauncherStage("ready");
+          applyEngineBootstrap(engineInfo);
         }
       }
     };
@@ -716,7 +721,7 @@ export default function App() {
       window.removeEventListener("focus", onFocus);
       document.removeEventListener("visibilitychange", onVisibility);
     };
-  }, [engineConnected, isDirectEngineOrigin, isMobile, launchAttempt, route]);
+  }, [engineApiToken, engineConnected, isDirectEngineOrigin, isMobile, launchAttempt, route]);
 
   useEffect(() => {
     if (!showApp) {
@@ -730,7 +735,7 @@ export default function App() {
 
     const loadState = async () => {
       try {
-        const nextState = await apiRequest(backendOrigin, "/api/state");
+        const nextState = await apiRequest(backendOrigin, "/api/state", {}, engineApiToken);
         if (mounted) {
           setDetectedEngineVersion(String(nextState.engineVersion || ""));
           setState(nextState);
@@ -752,7 +757,9 @@ export default function App() {
 
     void loadState();
 
-    const socket = new WebSocket(buildWsUrl(backendOrigin, "/ws"));
+    const socketUrl = new URL(buildWsUrl(backendOrigin, "/ws"));
+    socketUrl.searchParams.set("token", engineApiToken);
+    const socket = new WebSocket(socketUrl.toString());
 
     socket.onmessage = (event) => {
       try {
@@ -789,7 +796,7 @@ export default function App() {
       closedByCleanup = true;
       socket.close();
     };
-  }, [backendOrigin, showApp, t]);
+  }, [backendOrigin, engineApiToken, showApp, t]);
 
   useEffect(() => {
     if (!showApp) {
@@ -803,6 +810,7 @@ export default function App() {
         method: "POST",
         mode: "cors",
         keepalive: true,
+        headers: engineApiToken ? { "X-PeerSend-Engine-Token": engineApiToken } : undefined,
       }).catch(() => {});
 
     void postSession("/api/session/open");
@@ -822,7 +830,7 @@ export default function App() {
       window.clearInterval(intervalId);
       document.removeEventListener("visibilitychange", onVisibility);
     };
-  }, [backendOrigin, showApp]);
+  }, [backendOrigin, engineApiToken, showApp]);
 
   useEffect(() => {
     if (!showApp) {
@@ -844,6 +852,13 @@ export default function App() {
         window.clearTimeout(timeoutId);
         if (!response.ok) {
           throw new Error("Health check failed");
+        }
+        const data = await response.json();
+        if (data?.apiToken) {
+          setEngineApiToken(String(data.apiToken));
+        }
+        if (data?.version) {
+          setDetectedEngineVersion(String(data.version));
         }
         healthFailureCountRef.current = 0;
       } catch (error) {
@@ -930,8 +945,8 @@ export default function App() {
     try {
       const nextState = await apiRequest(backendOrigin, "/api/mode", {
         method: "POST",
-        body: JSON.stringify({ mode }),
-      });
+      body: JSON.stringify({ mode }),
+      }, engineApiToken);
       setState(nextState);
     } catch (error) {
       pushToast(error.message);
@@ -940,7 +955,7 @@ export default function App() {
 
   async function handleRefresh() {
     try {
-      await apiRequest(backendOrigin, "/api/refresh", { method: "POST" });
+      await apiRequest(backendOrigin, "/api/refresh", { method: "POST" }, engineApiToken);
     } catch (error) {
       pushToast(error.message);
     }
@@ -951,7 +966,7 @@ export default function App() {
       const nextState = await apiRequest(backendOrigin, "/api/save-path", {
         method: "POST",
         body: JSON.stringify({ path: savePathInput }),
-      });
+      }, engineApiToken);
       setState(nextState);
       setSavePathDirty(false);
     } catch (error) {
@@ -961,7 +976,7 @@ export default function App() {
 
   async function handleSavePathDialog() {
     try {
-      const result = await apiRequest(backendOrigin, "/api/save-path/dialog", { method: "POST" });
+      const result = await apiRequest(backendOrigin, "/api/save-path/dialog", { method: "POST" }, engineApiToken);
       if (result.path) {
         setSavePathInput(result.path);
         setSavePathDirty(false);
@@ -983,7 +998,7 @@ export default function App() {
           ssl: tunnelForm.ssl,
           token: tunnelForm.token,
         }),
-      });
+      }, engineApiToken);
       setState(nextState);
       setTunnelDirty(false);
     } catch (error) {
@@ -996,26 +1011,32 @@ export default function App() {
       return;
     }
     try {
-      const result = await apiRequest(backendOrigin, "/api/send-files/dialog", { method: "POST" });
+      const result = await apiRequest(backendOrigin, "/api/send-files/dialog", { method: "POST" }, engineApiToken);
       const files = Array.isArray(result.files) ? result.files : [];
+      const selectionId = String(result.selectionId || "").trim();
       if (!files.length) {
         if (!result.cancelled) {
           pushToast(t("file_picker_failed"));
         }
         return;
       }
+      if (!selectionId) {
+        pushToast(t("file_picker_failed"));
+        return;
+      }
       if (files.length > 1) {
         setPendingFiles(files);
+        setPendingSelectionId(selectionId);
         setShowZipChoice(true);
         return;
       }
-      void sendSelectedFiles(files, false);
+      void sendSelectedFiles(selectionId, files, false);
     } catch (error) {
       pushToast(error.message);
     }
   }
 
-  async function sendSelectedFiles(files, useZip) {
+  async function sendSelectedFiles(selectionId, files, useZip) {
     if (!files.length || !selectedPeerId) {
       return;
     }
@@ -1031,10 +1052,11 @@ export default function App() {
           mode: state.mode,
           peer_id: selectedPeerId,
           use_zip: useZip,
-          file_paths: files.map((file) => file.path),
+          selection_id: selectionId,
         }),
-      });
+      }, engineApiToken);
       setPendingFiles([]);
+      setPendingSelectionId("");
       setShowZipChoice(false);
       setWaitingForReceiverConfirm(true);
     } catch (error) {
@@ -1056,7 +1078,7 @@ export default function App() {
           request_id: state.pendingRequest.requestId,
           accept,
         }),
-      });
+      }, engineApiToken);
     } catch (error) {
       pushToast(error.message);
     }
@@ -1064,7 +1086,7 @@ export default function App() {
 
   async function handleCancelTransfer() {
     try {
-      await apiRequest(backendOrigin, "/api/cancel", { method: "POST" });
+      await apiRequest(backendOrigin, "/api/cancel", { method: "POST" }, engineApiToken);
     } catch (error) {
       pushToast(error.message);
     }
@@ -1334,6 +1356,7 @@ export default function App() {
                       />
                       <span>{t("use_ssl")}</span>
                     </label>
+                    {!tunnelForm.ssl ? <p className="section-hint">{t("ssl_disabled_warning")}</p> : null}
                     </>
                   ) : null}
                   <div className="button-row">
@@ -1431,7 +1454,7 @@ export default function App() {
                   className="secondary-button"
                   onClick={() => {
                     setShowZipChoice(false);
-                    void sendSelectedFiles(pendingFiles, false);
+                    void sendSelectedFiles(pendingSelectionId, pendingFiles, false);
                   }}
                 >
                   {t("no")}
@@ -1440,7 +1463,7 @@ export default function App() {
                   className="primary-button"
                   onClick={() => {
                     setShowZipChoice(false);
-                    void sendSelectedFiles(pendingFiles, true);
+                    void sendSelectedFiles(pendingSelectionId, pendingFiles, true);
                   }}
                 >
                   {t("yes")}

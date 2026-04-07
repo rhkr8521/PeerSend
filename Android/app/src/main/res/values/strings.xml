@@ -19,6 +19,7 @@
     <string name="tunnel_server_address">Server Address (Host:Port)</string>
     <string name="tunnel_token">TOKEN</string>
     <string name="ssl_enabled">Use SSL</string>
+    <string name="ssl_disabled_warning">If you turn off SSL, your tunnel token and connection details may not be protected on the network.</string>
     <string name="apply_reconnect">Apply and Reconnect</string>
     <string name="peer_list_lan">LAN Devices</string>
     <string name="peer_list_tunnel">Tunnel Peers</string>

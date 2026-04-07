@@ -7,6 +7,7 @@ import os
 import platform
 import queue
 import re
+import secrets
 import shutil
 import socket
 import subprocess
@@ -42,6 +43,15 @@ from p2p import (
 )
 from .version import ENGINE_VERSION
 
+try:
+    import keyring
+except Exception:  # pragma: no cover - optional dependency
+    keyring = None
+
+
+_SECRET_SERVICE = "PeerSend"
+_CUSTOM_TUNNEL_TOKEN_SECRET = "custom_tunnel_token"
+
 
 def _default_save_path() -> str:
     return str(Path.home() / "Downloads")
@@ -49,6 +59,61 @@ def _default_save_path() -> str:
 
 def _config_path() -> Path:
     return Path.home() / ".peersend-web.json"
+
+
+def _secret_fallback_path(name: str) -> Path:
+    return Path.home() / f".peersend-{name}.secret"
+
+
+def _load_secret(name: str) -> str:
+    if keyring is not None:
+        try:
+            value = keyring.get_password(_SECRET_SERVICE, name)
+            if value:
+                return value
+        except Exception:
+            pass
+    fallback_path = _secret_fallback_path(name)
+    if not fallback_path.exists():
+        return ""
+    try:
+        return fallback_path.read_text(encoding="utf-8").strip()
+    except Exception:
+        return ""
+
+
+def _save_secret(name: str, value: str) -> None:
+    stored_in_keyring = False
+    if keyring is not None:
+        try:
+            if value:
+                keyring.set_password(_SECRET_SERVICE, name, value)
+            else:
+                try:
+                    keyring.delete_password(_SECRET_SERVICE, name)
+                except Exception:
+                    pass
+            stored_in_keyring = True
+        except Exception:
+            stored_in_keyring = False
+
+    fallback_path = _secret_fallback_path(name)
+    if stored_in_keyring:
+        try:
+            if fallback_path.exists():
+                fallback_path.unlink()
+        except Exception:
+            pass
+        return
+
+    try:
+        if value:
+            fallback_path.write_text(value, encoding="utf-8")
+            os.chmod(fallback_path, 0o600)
+        elif fallback_path.exists():
+            fallback_path.unlink()
+    except Exception:
+        pass
 
 
 def _now_ms() -> int:
@@ -297,6 +362,8 @@ class PeerSendEngine:
         self.transfer_thread: Optional[threading.Thread] = None
         self.broadcast_thread: Optional[threading.Thread] = None
         self.cleanup_thread: Optional[threading.Thread] = None
+        self._selection_lock = threading.Lock()
+        self._native_file_selections: dict[str, dict[str, Any]] = {}
 
         self._load_config()
         self.my_name = _build_lan_device_name(self.base_name, self.lan_name_suffix)
@@ -382,7 +449,8 @@ class PeerSendEngine:
         legacy_token = str(data.get("tunnel_token") or "").strip()
         self.custom_tunnel_host = str(data.get("custom_tunnel_host") or "").strip()
         self.custom_tunnel_ssl = bool(data.get("custom_tunnel_ssl", legacy_ssl))
-        self.custom_tunnel_token = str(data.get("custom_tunnel_token") or "").strip()
+        stored_custom_token = _load_secret(_CUSTOM_TUNNEL_TOKEN_SECRET)
+        self.custom_tunnel_token = stored_custom_token or str(data.get("custom_tunnel_token") or "").strip()
         if self.custom_tunnel_host == TUNNEL_HOST:
             self.custom_tunnel_host = ""
         if self.custom_tunnel_token == TUNNEL_TOKEN:
@@ -401,6 +469,8 @@ class PeerSendEngine:
             self.custom_tunnel_token = legacy_token
         if not self.custom_tunnel_host and not self.custom_tunnel_token:
             self.use_public_tunnel = True
+        if self.custom_tunnel_token:
+            _save_secret(_CUSTOM_TUNNEL_TOKEN_SECRET, self.custom_tunnel_token)
         self.mode = "lan"
         self._apply_tunnel_runtime_settings()
         self.tunnel_status = self.tr("status_lan_mode")
@@ -412,16 +482,15 @@ class PeerSendEngine:
             "use_public_tunnel": self.use_public_tunnel,
             "custom_tunnel_host": self.custom_tunnel_host,
             "custom_tunnel_ssl": self.custom_tunnel_ssl,
-            "custom_tunnel_token": self.custom_tunnel_token,
             "tunnel_host": self.tunnel_host,
             "tunnel_ssl": self.tunnel_ssl,
-            "tunnel_token": self.tunnel_token,
             "language": self.language,
         }
         try:
             _config_path().write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
         except Exception:
             pass
+        _save_secret(_CUSTOM_TUNNEL_TOKEN_SECRET, "" if self.use_public_tunnel else self.custom_tunnel_token.strip())
 
     # ------------------------
     # state/events
@@ -634,13 +703,15 @@ end try
                 )
                 if result.returncode == 0:
                     raw_paths = [line.strip() for line in (result.stdout or "").splitlines() if line.strip()]
-                    files = [
-                        {"path": path, "name": Path(path).name}
-                        for path in raw_paths
-                        if os.path.isfile(path)
-                    ]
+                    valid_paths = [path for path in raw_paths if os.path.isfile(path)]
+                    files = [{"name": Path(path).name} for path in valid_paths]
                     if files:
-                        return {"ok": True, "files": files, "cancelled": False}
+                        return {
+                            "ok": True,
+                            "selectionId": self._create_file_selection(valid_paths),
+                            "files": files,
+                            "cancelled": False,
+                        }
                     return {"ok": False, "files": [], "cancelled": True}
                 stderr = (result.stderr or "").strip()
                 if "User canceled" in stderr:
@@ -663,12 +734,50 @@ end try
                 )
             )
             root.destroy()
-            files = [{"path": path, "name": Path(path).name} for path in paths if os.path.isfile(path)]
+            valid_paths = [path for path in paths if os.path.isfile(path)]
+            files = [{"name": Path(path).name} for path in valid_paths]
             if files:
-                return {"ok": True, "files": files, "cancelled": False}
+                return {
+                    "ok": True,
+                    "selectionId": self._create_file_selection(valid_paths),
+                    "files": files,
+                    "cancelled": False,
+                }
             return {"ok": False, "files": [], "cancelled": True}
         except Exception as error:
             return {"ok": False, "files": [], "cancelled": False, "error": str(error)}
+
+    def _create_file_selection(self, file_paths: list[str]) -> str:
+        selection_id = secrets.token_urlsafe(24)
+        with self._selection_lock:
+            self._prune_expired_file_selections_locked()
+            self._native_file_selections[selection_id] = {
+                "file_paths": tuple(file_paths),
+                "created_at": time.time(),
+                "expires_at": time.time() + 300,
+            }
+        return selection_id
+
+    def _consume_file_selection(self, selection_id: str) -> list[str]:
+        cleaned_id = str(selection_id or "").strip()
+        if not cleaned_id:
+            raise ValueError("selection_id is required")
+        with self._selection_lock:
+            self._prune_expired_file_selections_locked()
+            payload = self._native_file_selections.pop(cleaned_id, None)
+        if not payload:
+            raise ValueError("Selected files expired. Please choose the files again.")
+        return [str(path) for path in payload.get("file_paths") or []]
+
+    def _prune_expired_file_selections_locked(self) -> None:
+        now = time.time()
+        expired_ids = [
+            selection_id
+            for selection_id, payload in self._native_file_selections.items()
+            if float(payload.get("expires_at") or 0) <= now
+        ]
+        for selection_id in expired_ids:
+            self._native_file_selections.pop(selection_id, None)
 
     def cancel_transfer(self) -> None:
         self.cancel_flag = True
@@ -1130,7 +1239,8 @@ end try
     # ------------------------
     # send flow
     # ------------------------
-    def queue_send_native_files(self, *, mode: str, peer_id: str, file_paths: list[str], use_zip: bool) -> None:
+    def queue_send_native_files(self, *, mode: str, peer_id: str, selection_id: str, use_zip: bool) -> None:
+        file_paths = self._consume_file_selection(selection_id)
         normalized_paths: list[str] = []
         normalized_names: list[str] = []
         for path in file_paths:

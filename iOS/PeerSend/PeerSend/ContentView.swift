@@ -556,6 +556,12 @@ private struct TunnelSettingsCard: View {
                                 get: { tunnelSSL },
                                 set: onTunnelSSLChanged
                             ))
+
+                            if !tunnelSSL {
+                                Text(L10n.sslDisabledWarning)
+                                    .font(.footnote)
+                                    .foregroundStyle(Color.appSecondaryText)
+                            }
                         }
                     }
 

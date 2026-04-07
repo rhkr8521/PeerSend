@@ -18,7 +18,7 @@ if ICON_PATH.exists():
     datas.append((str(ICON_PATH), "."))
 
 metadata = []
-for package in ("fastapi", "uvicorn", "aiohttp", "websockets", "python-multipart", "psutil", "certifi", "pydantic", "pydantic_core"):
+for package in ("fastapi", "uvicorn", "aiohttp", "websockets", "python-multipart", "psutil", "certifi", "pydantic", "pydantic_core", "keyring"):
     metadata += copy_metadata(package)
 
 hiddenimports = [
@@ -28,6 +28,7 @@ hiddenimports = [
     *collect_submodules("uvicorn"),
     *collect_submodules("aiohttp"),
     *collect_submodules("websockets"),
+    *collect_submodules("keyring"),
     *collect_submodules("engine"),
     "multipart",
     "multipart.multipart",

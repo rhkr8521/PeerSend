@@ -1,4 +1,5 @@
 import Foundation
+import Security
 import UIKit
 
 final class AppPreferences {
@@ -25,7 +26,15 @@ final class AppPreferences {
     }
 
     var savedTunnelToken: String {
-        defaults.string(forKey: Key.tunnelToken) ?? ""
+        if let token = keychainString(for: Key.tunnelToken) {
+            return token
+        }
+        let legacyToken = defaults.string(forKey: Key.tunnelToken) ?? ""
+        if !legacyToken.isEmpty {
+            setKeychainString(legacyToken, forKey: Key.tunnelToken)
+            defaults.removeObject(forKey: Key.tunnelToken)
+        }
+        return legacyToken
     }
 
     var usePublicTunnel: Bool {
@@ -47,8 +56,9 @@ final class AppPreferences {
     func saveTunnel(host: String, ssl: Bool, token: String, usePublic: Bool) {
         defaults.set(host, forKey: Key.tunnelHost)
         defaults.set(ssl, forKey: Key.tunnelSSL)
-        defaults.set(token, forKey: Key.tunnelToken)
         defaults.set(usePublic, forKey: Key.usePublicTunnel)
+        setKeychainString(token, forKey: Key.tunnelToken)
+        defaults.removeObject(forKey: Key.tunnelToken)
     }
 
     func rememberInitialTunnelChoice(usePublic: Bool) {
@@ -89,5 +99,47 @@ final class AppPreferences {
             return currentName
         }
         return UIDevice.current.model
+    }
+
+    private func keychainQuery(for key: String) -> [String: Any] {
+        [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: "PeerSend",
+            kSecAttrAccount as String: key,
+        ]
+    }
+
+    private func keychainString(for key: String) -> String? {
+        var query = keychainQuery(for: key)
+        query[kSecReturnData as String] = true
+        query[kSecMatchLimit as String] = kSecMatchLimitOne
+
+        var item: CFTypeRef?
+        let status = SecItemCopyMatching(query as CFDictionary, &item)
+        guard status == errSecSuccess,
+              let data = item as? Data,
+              let string = String(data: data, encoding: .utf8) else {
+            return nil
+        }
+        return string
+    }
+
+    private func setKeychainString(_ value: String, forKey key: String) {
+        let query = keychainQuery(for: key)
+        if value.isEmpty {
+            SecItemDelete(query as CFDictionary)
+            return
+        }
+
+        let encoded = Data(value.utf8)
+        let attributes = [kSecValueData as String: encoded]
+        let updateStatus = SecItemUpdate(query as CFDictionary, attributes as CFDictionary)
+        if updateStatus == errSecSuccess {
+            return
+        }
+
+        var createQuery = query
+        createQuery[kSecValueData as String] = encoded
+        SecItemAdd(createQuery as CFDictionary, nil)
     }
 }

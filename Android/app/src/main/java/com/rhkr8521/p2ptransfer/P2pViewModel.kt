@@ -9,6 +9,8 @@ import android.provider.OpenableColumns
 import android.util.Base64
 import androidx.annotation.PluralsRes
 import androidx.annotation.StringRes
+import androidx.security.crypto.EncryptedSharedPreferences
+import androidx.security.crypto.MasterKey
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.gson.Gson
@@ -102,6 +104,7 @@ class P2pViewModel(
 
     companion object {
         private const val PREFS_NAME = "p2p_android_prefs"
+        private const val SECURE_PREFS_NAME = "p2p_android_secure_prefs"
         private const val KEY_TUNNEL_HOST = "tunnel_host"
         private const val KEY_TUNNEL_SSL = "tunnel_ssl"
         private const val KEY_TUNNEL_TOKEN = "tunnel_token"
@@ -113,6 +116,7 @@ class P2pViewModel(
 
     private val appContext = application.applicationContext
     private val prefs = appContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+    private val securePrefs = createSecurePrefs()
     private val storage = P2pStorage(appContext)
     private val gson = Gson()
     private val httpClient = OkHttpClient.Builder()
@@ -127,7 +131,7 @@ class P2pViewModel(
     private val pendingTunnelPackets = ConcurrentHashMap<String, MutableList<ByteArray>>()
     private val savedTunnelHost = prefs.getString(KEY_TUNNEL_HOST, "") ?: ""
     private val savedTunnelSsl = prefs.getBoolean(KEY_TUNNEL_SSL, true)
-    private val savedTunnelToken = prefs.getString(KEY_TUNNEL_TOKEN, "") ?: ""
+    private val savedTunnelToken = readStoredTunnelToken()
     private val baseDeviceName = buildBaseDeviceName()
     private val lanNameSuffix = prefs.getString(KEY_LAN_NAME_SUFFIX, null)
         ?: generateLanNameSuffix().also { prefs.edit().putString(KEY_LAN_NAME_SUFFIX, it).apply() }
@@ -301,13 +305,14 @@ class P2pViewModel(
         val state = _uiState.value
         val host = state.tunnelHost.trim()
         val token = state.tunnelToken.trim()
-        _uiState.update { it.copy(tunnelHost = host, tunnelToken = token) }
+        val ssl = state.tunnelSsl
+        _uiState.update { it.copy(tunnelHost = host, tunnelToken = token, tunnelSsl = ssl) }
         prefs.edit()
             .putString(KEY_TUNNEL_HOST, host)
-            .putBoolean(KEY_TUNNEL_SSL, state.tunnelSsl)
-            .putString(KEY_TUNNEL_TOKEN, token)
+            .putBoolean(KEY_TUNNEL_SSL, ssl)
             .putBoolean(KEY_USE_PUBLIC_TUNNEL, state.usePublicTunnel)
             .apply()
+        persistTunnelToken(token)
 
         activeUsePublicTunnel = state.usePublicTunnel
         if (activeUsePublicTunnel) {
@@ -316,7 +321,7 @@ class P2pViewModel(
             activeTunnelToken = DEFAULT_TUNNEL_TOKEN
         } else {
             activeTunnelHost = host
-            activeTunnelSsl = state.tunnelSsl
+            activeTunnelSsl = ssl
             activeTunnelToken = token
         }
 
@@ -329,6 +334,36 @@ class P2pViewModel(
         updateTunnelStatus(string(R.string.tunnel_status_starting))
         startTunnelStackIfNeeded()
         reconnectTunnelWebSocket()
+    }
+
+    private fun createSecurePrefs() = runCatching {
+        val masterKey = MasterKey.Builder(appContext)
+            .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+            .build()
+        EncryptedSharedPreferences.create(
+            appContext,
+            SECURE_PREFS_NAME,
+            masterKey,
+            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
+        )
+    }.getOrElse { prefs }
+
+    private fun readStoredTunnelToken(): String {
+        val token = securePrefs.getString(KEY_TUNNEL_TOKEN, null)
+            ?: prefs.getString(KEY_TUNNEL_TOKEN, "")
+            ?: ""
+        if (securePrefs !== prefs && prefs.contains(KEY_TUNNEL_TOKEN)) {
+            prefs.edit().remove(KEY_TUNNEL_TOKEN).apply()
+        }
+        return token
+    }
+
+    private fun persistTunnelToken(token: String) {
+        securePrefs.edit().putString(KEY_TUNNEL_TOKEN, token).apply()
+        if (securePrefs !== prefs && prefs.contains(KEY_TUNNEL_TOKEN)) {
+            prefs.edit().remove(KEY_TUNNEL_TOKEN).apply()
+        }
     }
 
     fun respondToPendingRequest(accept: Boolean) {

@@ -786,6 +786,13 @@ private fun TunnelSettingsCard(
                             onCheckedChange = onTunnelSslChanged,
                         )
                     }
+                    if (!state.tunnelSsl) {
+                        Text(
+                            text = stringResource(R.string.ssl_disabled_warning),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.secondary,
+                        )
+                    }
                 }
                 Button(onClick = onApplyTunnelSettings, modifier = Modifier.fillMaxWidth()) {
                     Text(stringResource(R.string.apply_reconnect))

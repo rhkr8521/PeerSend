@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import secrets
 import os
 import shutil
 import sys
@@ -11,7 +12,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Literal, Optional
 
-from fastapi import FastAPI, File, Form, HTTPException, Query, UploadFile, WebSocket, WebSocketDisconnect
+from fastapi import Depends, FastAPI, File, Form, Header, HTTPException, Query, UploadFile, WebSocket, WebSocketDisconnect, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel
@@ -55,7 +56,7 @@ class SendFilesPayload(BaseModel):
     mode: Literal["lan", "tunnel"]
     peer_id: str
     use_zip: bool = False
-    file_paths: list[str]
+    selection_id: str
 
 
 class RespondPayload(BaseModel):
@@ -116,6 +117,7 @@ async def lifespan(app: FastAPI):
     stop_idle_watch = threading.Event()
     app.state.engine = engine
     app.state.sessions = sessions
+    app.state.api_token = secrets.token_urlsafe(32)
     engine.start()
 
     def idle_watch() -> None:
@@ -137,7 +139,7 @@ def create_app() -> FastAPI:
     app.add_middleware(
         CORSMiddleware,
         allow_origins=ALLOWED_CORS_ORIGINS,
-        allow_credentials=True,
+        allow_credentials=False,
         allow_methods=["*"],
         allow_headers=["*"],
     )
@@ -147,6 +149,14 @@ def create_app() -> FastAPI:
 
     def sessions() -> SessionManager:
         return app.state.sessions
+
+    def api_token() -> str:
+        return str(app.state.api_token)
+
+    def require_api_token(x_peersend_engine_token: Optional[str] = Header(default=None, alias="X-PeerSend-Engine-Token")) -> None:
+        expected = api_token()
+        if not x_peersend_engine_token or not secrets.compare_digest(str(x_peersend_engine_token), expected):
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized")
 
     def resolve_session_id(payload: Optional[SessionPayload], session_id: Optional[str]) -> str:
         value = session_id or (payload.session_id if payload else None)
@@ -161,50 +171,51 @@ def create_app() -> FastAPI:
             "product": "PeerSend Engine",
             "version": ENGINE_VERSION,
             "language": engine().language,
+            "apiToken": api_token(),
         }
 
     @app.get("/api/state")
-    async def get_state() -> dict:
+    async def get_state(_auth: None = Depends(require_api_token)) -> dict:
         return engine().serialize_state()
 
     @app.post("/api/mode")
-    async def set_mode(payload: ModePayload) -> dict:
+    async def set_mode(payload: ModePayload, _auth: None = Depends(require_api_token)) -> dict:
         return engine().set_mode(payload.mode)
 
     @app.post("/api/refresh")
-    async def refresh() -> dict:
+    async def refresh(_auth: None = Depends(require_api_token)) -> dict:
         engine().manual_refresh()
         return {"ok": True}
 
     @app.post("/api/tunnel-settings")
-    async def tunnel_settings(payload: TunnelSettingsPayload) -> dict:
+    async def tunnel_settings(payload: TunnelSettingsPayload, _auth: None = Depends(require_api_token)) -> dict:
         return engine().update_tunnel_settings(payload.host, payload.ssl, payload.token, payload.use_public_tunnel)
 
     @app.post("/api/save-path")
-    async def save_path(payload: SavePathPayload) -> dict:
+    async def save_path(payload: SavePathPayload, _auth: None = Depends(require_api_token)) -> dict:
         return engine().set_save_path(payload.path)
 
     @app.post("/api/save-path/dialog")
-    async def save_path_dialog() -> dict:
+    async def save_path_dialog(_auth: None = Depends(require_api_token)) -> dict:
         result = await asyncio.to_thread(engine().choose_save_path_dialog)
         if not result.get("ok") and not result.get("cancelled") and result.get("error"):
             raise HTTPException(status_code=500, detail=str(result.get("error")))
         return result
 
     @app.post("/api/send-files/dialog")
-    async def send_files_dialog() -> dict:
+    async def send_files_dialog(_auth: None = Depends(require_api_token)) -> dict:
         result = await asyncio.to_thread(engine().choose_send_files_dialog)
         if not result.get("ok") and not result.get("cancelled") and result.get("error"):
             raise HTTPException(status_code=500, detail=str(result.get("error")))
         return result
 
     @app.post("/api/send-files")
-    async def send_files(payload: SendFilesPayload) -> dict:
+    async def send_files(payload: SendFilesPayload, _auth: None = Depends(require_api_token)) -> dict:
         try:
             engine().queue_send_native_files(
                 mode=payload.mode,
                 peer_id=payload.peer_id,
-                file_paths=payload.file_paths,
+                selection_id=payload.selection_id,
                 use_zip=payload.use_zip,
             )
         except (ValueError, RuntimeError) as error:
@@ -212,13 +223,13 @@ def create_app() -> FastAPI:
         return {"ok": True}
 
     @app.post("/api/respond")
-    async def respond(payload: RespondPayload) -> dict:
+    async def respond(payload: RespondPayload, _auth: None = Depends(require_api_token)) -> dict:
         if not engine().respond_to_request(payload.request_id, payload.accept):
             raise HTTPException(status_code=404, detail="Request not found")
         return {"ok": True}
 
     @app.post("/api/cancel")
-    async def cancel_transfer() -> dict:
+    async def cancel_transfer(_auth: None = Depends(require_api_token)) -> dict:
         engine().cancel_transfer()
         return {"ok": True}
 
@@ -226,12 +237,13 @@ def create_app() -> FastAPI:
     async def session_open(
         payload: Optional[SessionPayload] = None,
         session_id: Optional[str] = Query(default=None),
+        _auth: None = Depends(require_api_token),
     ) -> dict:
         sessions().open(resolve_session_id(payload, session_id))
         return {"ok": True}
 
     @app.post("/api/session/open/{session_id}")
-    async def session_open_path(session_id: str) -> dict:
+    async def session_open_path(session_id: str, _auth: None = Depends(require_api_token)) -> dict:
         sessions().open(session_id)
         return {"ok": True}
 
@@ -239,12 +251,13 @@ def create_app() -> FastAPI:
     async def session_heartbeat(
         payload: Optional[SessionPayload] = None,
         session_id: Optional[str] = Query(default=None),
+        _auth: None = Depends(require_api_token),
     ) -> dict:
         sessions().heartbeat(resolve_session_id(payload, session_id))
         return {"ok": True}
 
     @app.post("/api/session/heartbeat/{session_id}")
-    async def session_heartbeat_path(session_id: str) -> dict:
+    async def session_heartbeat_path(session_id: str, _auth: None = Depends(require_api_token)) -> dict:
         sessions().heartbeat(session_id)
         return {"ok": True}
 
@@ -252,12 +265,13 @@ def create_app() -> FastAPI:
     async def session_close(
         payload: Optional[SessionPayload] = None,
         session_id: Optional[str] = Query(default=None),
+        _auth: None = Depends(require_api_token),
     ) -> dict:
         sessions().close(resolve_session_id(payload, session_id))
         return {"ok": True}
 
     @app.post("/api/session/close/{session_id}")
-    async def session_close_path(session_id: str) -> dict:
+    async def session_close_path(session_id: str, _auth: None = Depends(require_api_token)) -> dict:
         sessions().close(session_id)
         return {"ok": True}
 
@@ -267,6 +281,7 @@ def create_app() -> FastAPI:
         peer_id: str = Form(...),
         use_zip: bool = Form(False),
         files: list[UploadFile] = File(...),
+        _auth: None = Depends(require_api_token),
     ) -> dict:
         if not files:
             raise HTTPException(status_code=400, detail="No files uploaded")
@@ -307,6 +322,10 @@ def create_app() -> FastAPI:
 
     @app.websocket("/ws")
     async def websocket_endpoint(websocket: WebSocket) -> None:
+        token = str(websocket.query_params.get("token") or "")
+        if not token or not secrets.compare_digest(token, api_token()):
+            await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+            return
         await websocket.accept()
         q = engine().events.subscribe()
         try:

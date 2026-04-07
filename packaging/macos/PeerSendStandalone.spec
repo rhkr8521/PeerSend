@@ -31,6 +31,7 @@ hiddenimports = sorted(
         + collect_submodules("pydantic_core")
         + collect_submodules("aiohttp")
         + collect_submodules("websockets")
+        + collect_submodules("keyring")
         + collect_submodules("engine")
         + [
             "multipart",
@@ -56,6 +57,7 @@ datas += copy_metadata("aiohttp")
 datas += copy_metadata("websockets")
 datas += copy_metadata("python-multipart")
 datas += copy_metadata("psutil")
+datas += copy_metadata("keyring")
 
 app_info_plist = {
     "CFBundleDisplayName": "PeerSend",

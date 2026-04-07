@@ -26,6 +26,11 @@
 	<true/>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>PeerSend uses your local network to discover nearby devices and transfer files.</string>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsArbitraryLoads</key>
+		<true/>
+	</dict>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

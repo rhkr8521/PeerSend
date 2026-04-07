@@ -230,6 +230,7 @@ export const openSourceContent = {
           { name: "psutil", version: "7.2.2", license: "BSD-3-Clause", href: "https://github.com/giampaolo/psutil" },
           { name: "python-multipart", version: "0.0.22", license: "Apache-2.0", href: "https://github.com/Kludex/python-multipart" },
           { name: "websockets", version: "15.0.1", license: "BSD-3-Clause", href: "https://websockets.readthedocs.io/" },
+          { name: "keyring", version: "25.x", license: "MIT", href: "https://github.com/jaraco/keyring" },
         ],
         notes: [
           "오프라인 모드 UI는 CPython에 포함된 Tkinter/Tcl/Tk 환경을 사용합니다.",
@@ -245,6 +246,7 @@ export const openSourceContent = {
           { name: "AndroidX Activity Compose", version: "1.10.1", license: "Apache-2.0", href: "https://developer.android.com/jetpack/androidx" },
           { name: "Jetpack Compose UI / Graphics / Tooling Preview / Material3 / Material Icons", version: "Compose BOM 2024.09.00", license: "Apache-2.0", href: "https://developer.android.com/jetpack/compose" },
           { name: "AndroidX DocumentFile", version: "1.0.1", license: "Apache-2.0", href: "https://developer.android.com/jetpack/androidx" },
+          { name: "AndroidX Security Crypto", version: "1.1.0-alpha06", license: "Apache-2.0", href: "https://developer.android.com/jetpack/androidx/releases/security" },
           { name: "Kotlinx Coroutines Android", version: "1.9.0", license: "Apache-2.0", href: "https://github.com/Kotlin/kotlinx.coroutines" },
           { name: "OkHttp", version: "4.12.0", license: "Apache-2.0", href: "https://square.github.io/okhttp/" },
           { name: "Gson", version: "2.11.0", license: "Apache-2.0", href: "https://github.com/google/gson" },
@@ -279,6 +281,7 @@ export const openSourceContent = {
           { name: "psutil", version: "7.2.2", license: "BSD-3-Clause", href: "https://github.com/giampaolo/psutil" },
           { name: "python-multipart", version: "0.0.22", license: "Apache-2.0", href: "https://github.com/Kludex/python-multipart" },
           { name: "websockets", version: "15.0.1", license: "BSD-3-Clause", href: "https://websockets.readthedocs.io/" },
+          { name: "keyring", version: "25.x", license: "MIT", href: "https://github.com/jaraco/keyring" },
         ],
         notes: [
           "The offline mode UI uses the Tkinter/Tcl/Tk environment included with CPython.",
@@ -294,6 +297,7 @@ export const openSourceContent = {
           { name: "AndroidX Activity Compose", version: "1.10.1", license: "Apache-2.0", href: "https://developer.android.com/jetpack/androidx" },
           { name: "Jetpack Compose UI / Graphics / Tooling Preview / Material3 / Material Icons", version: "Compose BOM 2024.09.00", license: "Apache-2.0", href: "https://developer.android.com/jetpack/compose" },
           { name: "AndroidX DocumentFile", version: "1.0.1", license: "Apache-2.0", href: "https://developer.android.com/jetpack/androidx" },
+          { name: "AndroidX Security Crypto", version: "1.1.0-alpha06", license: "Apache-2.0", href: "https://developer.android.com/jetpack/androidx/releases/security" },
           { name: "Kotlinx Coroutines Android", version: "1.9.0", license: "Apache-2.0", href: "https://github.com/Kotlin/kotlinx.coroutines" },
           { name: "OkHttp", version: "4.12.0", license: "Apache-2.0", href: "https://square.github.io/okhttp/" },
           { name: "Gson", version: "2.11.0", license: "Apache-2.0", href: "https://github.com/google/gson" },

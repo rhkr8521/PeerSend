@@ -19,6 +19,7 @@
     <string name="tunnel_server_address">서버 주소 (Host:Port)</string>
     <string name="tunnel_token">TOKEN</string>
     <string name="ssl_enabled">SSL 사용</string>
+    <string name="ssl_disabled_warning">SSL을 끄면 터널 토큰과 연결 정보가 네트워크에서 보호되지 않을 수 있습니다.</string>
     <string name="apply_reconnect">적용 및 재연결</string>
     <string name="peer_list_lan">LAN 장치 목록</string>
     <string name="peer_list_tunnel">터널 피어 목록</string>
