@@ -603,6 +603,9 @@ export default function LandingClient({ initialLocale = "en" }) {
             <a className="footer-link" href="/terms">
               {content.footer.terms}
             </a>
+            <a className="footer-link" href="/open-source-licenses">
+              {content.footer.openSource}
+            </a>
           </div>
         </div>
         <span>© {new Date().getFullYear()} rhkr8521. {content.footer.copyright}</span>

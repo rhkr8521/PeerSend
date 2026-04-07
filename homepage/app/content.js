@@ -99,6 +99,7 @@ export const landingContent = {
       body: "PC와 휴대폰, 그리고 기기와 기기 사이를 더 빠르고 자연스럽게.",
       privacy: "개인정보처리방침",
       terms: "이용약관",
+      openSource: "오픈소스 라이선스",
       copyright: "All rights reserved.",
     },
   },
@@ -202,8 +203,110 @@ export const landingContent = {
       body: "Faster, more natural transfer between PCs, phones, and devices.",
       privacy: "Privacy Policy",
       terms: "Terms of Service",
+      openSource: "Open Source Licenses",
       copyright: "All rights reserved.",
     },
+  },
+};
+
+export const openSourceContent = {
+  ko: {
+    metaTitle: "PeerSend 오픈소스 라이선스",
+    metaDescription: "PeerSend에 사용된 오픈소스 라이선스 안내",
+    home: "홈으로",
+    tag: "Open Source Licenses",
+    title: "PeerSend 오픈소스 라이선스",
+    intro:
+      "이 페이지는 PeerSend 데스크톱 엔진, Android 앱, iOS 앱에 직접 사용되거나 배포에 포함되는 주요 오픈소스 구성 요소와 라이선스를 정리한 문서입니다.",
+    sections: [
+      {
+        title: "Desktop Engine",
+        description: "Windows/macOS/Linux용 로컬 엔진과 엔진 API에 사용되는 주요 오픈소스입니다.",
+        items: [
+          { name: "CPython", version: "3.x", license: "PSF-2.0", href: "https://www.python.org/" },
+          { name: "FastAPI", version: "0.135.3", license: "MIT", href: "https://fastapi.tiangolo.com/" },
+          { name: "Uvicorn", version: "0.43.0", license: "BSD-3-Clause", href: "https://www.uvicorn.org/" },
+          { name: "aiohttp", version: "3.13.5", license: "Apache-2.0 / MIT", href: "https://github.com/aio-libs/aiohttp" },
+          { name: "psutil", version: "7.2.2", license: "BSD-3-Clause", href: "https://github.com/giampaolo/psutil" },
+          { name: "python-multipart", version: "0.0.22", license: "Apache-2.0", href: "https://github.com/Kludex/python-multipart" },
+          { name: "websockets", version: "15.0.1", license: "BSD-3-Clause", href: "https://websockets.readthedocs.io/" },
+        ],
+        notes: [
+          "오프라인 모드 UI는 CPython에 포함된 Tkinter/Tcl/Tk 환경을 사용합니다.",
+        ],
+      },
+      {
+        title: "Android App",
+        description: "Android 앱에 직접 사용되는 주요 오픈소스 및 라이브러리입니다.",
+        items: [
+          { name: "Kotlin / Kotlin Standard Library", version: "2.2.10", license: "Apache-2.0", href: "https://kotlinlang.org/" },
+          { name: "AndroidX Core KTX", version: "1.16.0", license: "Apache-2.0", href: "https://developer.android.com/jetpack/androidx" },
+          { name: "AndroidX Lifecycle Runtime / Compose / ViewModel Compose", version: "2.9.2", license: "Apache-2.0", href: "https://developer.android.com/jetpack/androidx" },
+          { name: "AndroidX Activity Compose", version: "1.10.1", license: "Apache-2.0", href: "https://developer.android.com/jetpack/androidx" },
+          { name: "Jetpack Compose UI / Graphics / Tooling Preview / Material3 / Material Icons", version: "Compose BOM 2024.09.00", license: "Apache-2.0", href: "https://developer.android.com/jetpack/compose" },
+          { name: "AndroidX DocumentFile", version: "1.0.1", license: "Apache-2.0", href: "https://developer.android.com/jetpack/androidx" },
+          { name: "Kotlinx Coroutines Android", version: "1.9.0", license: "Apache-2.0", href: "https://github.com/Kotlin/kotlinx.coroutines" },
+          { name: "OkHttp", version: "4.12.0", license: "Apache-2.0", href: "https://square.github.io/okhttp/" },
+          { name: "Gson", version: "2.11.0", license: "Apache-2.0", href: "https://github.com/google/gson" },
+        ],
+      },
+      {
+        title: "iOS App",
+        description: "iOS 앱에 직접 포함되는 오픈소스 구성 요소입니다.",
+        items: [
+          { name: "zlib", version: "system", license: "zlib License", href: "https://zlib.net/" },
+        ],
+      },
+    ],
+  },
+  en: {
+    metaTitle: "PeerSend Open Source Licenses",
+    metaDescription: "Open source licenses used by PeerSend",
+    home: "Home",
+    tag: "Open Source Licenses",
+    title: "PeerSend Open Source Licenses",
+    intro:
+      "This page lists the major open-source components directly used by, or bundled with, the PeerSend desktop engine, Android app, and iOS app.",
+    sections: [
+      {
+        title: "Desktop Engine",
+        description: "Major open-source components used by the local engine and engine API for Windows, macOS, and Linux.",
+        items: [
+          { name: "CPython", version: "3.x", license: "PSF-2.0", href: "https://www.python.org/" },
+          { name: "FastAPI", version: "0.135.3", license: "MIT", href: "https://fastapi.tiangolo.com/" },
+          { name: "Uvicorn", version: "0.43.0", license: "BSD-3-Clause", href: "https://www.uvicorn.org/" },
+          { name: "aiohttp", version: "3.13.5", license: "Apache-2.0 / MIT", href: "https://github.com/aio-libs/aiohttp" },
+          { name: "psutil", version: "7.2.2", license: "BSD-3-Clause", href: "https://github.com/giampaolo/psutil" },
+          { name: "python-multipart", version: "0.0.22", license: "Apache-2.0", href: "https://github.com/Kludex/python-multipart" },
+          { name: "websockets", version: "15.0.1", license: "BSD-3-Clause", href: "https://websockets.readthedocs.io/" },
+        ],
+        notes: [
+          "The offline mode UI uses the Tkinter/Tcl/Tk environment included with CPython.",
+        ],
+      },
+      {
+        title: "Android App",
+        description: "Major open-source libraries directly used by the Android app.",
+        items: [
+          { name: "Kotlin / Kotlin Standard Library", version: "2.2.10", license: "Apache-2.0", href: "https://kotlinlang.org/" },
+          { name: "AndroidX Core KTX", version: "1.16.0", license: "Apache-2.0", href: "https://developer.android.com/jetpack/androidx" },
+          { name: "AndroidX Lifecycle Runtime / Compose / ViewModel Compose", version: "2.9.2", license: "Apache-2.0", href: "https://developer.android.com/jetpack/androidx" },
+          { name: "AndroidX Activity Compose", version: "1.10.1", license: "Apache-2.0", href: "https://developer.android.com/jetpack/androidx" },
+          { name: "Jetpack Compose UI / Graphics / Tooling Preview / Material3 / Material Icons", version: "Compose BOM 2024.09.00", license: "Apache-2.0", href: "https://developer.android.com/jetpack/compose" },
+          { name: "AndroidX DocumentFile", version: "1.0.1", license: "Apache-2.0", href: "https://developer.android.com/jetpack/androidx" },
+          { name: "Kotlinx Coroutines Android", version: "1.9.0", license: "Apache-2.0", href: "https://github.com/Kotlin/kotlinx.coroutines" },
+          { name: "OkHttp", version: "4.12.0", license: "Apache-2.0", href: "https://square.github.io/okhttp/" },
+          { name: "Gson", version: "2.11.0", license: "Apache-2.0", href: "https://github.com/google/gson" },
+        ],
+      },
+      {
+        title: "iOS App",
+        description: "Open-source components directly bundled in the iOS app.",
+        items: [
+          { name: "zlib", version: "system", license: "zlib License", href: "https://zlib.net/" },
+        ],
+      },
+    ],
   },
 };
 

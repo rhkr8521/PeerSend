@@ -1,16 +1,16 @@
 import { headers } from "next/headers";
-import { landingContent, termsContent } from "../content";
+import { landingContent, openSourceContent } from "../content";
 import { detectLocaleFromLanguage } from "../locale";
 
 export const metadata = {
-  title: "PeerSend Terms of Service",
-  description: "PeerSend Terms of Service",
+  title: "PeerSend Open Source Licenses",
+  description: "Open source licenses used by PeerSend",
 };
 
-export default async function TermsPage() {
+export default async function OpenSourceLicensesPage() {
   const requestHeaders = await headers();
   const locale = detectLocaleFromLanguage(requestHeaders.get("accept-language"));
-  const content = termsContent[locale];
+  const content = openSourceContent[locale];
   const footer = landingContent[locale].footer;
 
   return (
@@ -42,22 +42,31 @@ export default async function TermsPage() {
       {content.sections.map((section) => (
         <section className="docs-section" key={section.title}>
           <h2>{section.title}</h2>
-          {section.paragraphs?.map((paragraph, index) => {
-            const isLast = index === section.paragraphs.length - 1 && section.emphasisLast;
-            return isLast ? (
-              <p key={paragraph}>
-                <strong>{paragraph}</strong>
-              </p>
-            ) : (
-              <p key={paragraph}>{paragraph}</p>
-            );
-          })}
-          {section.list ? (
-            <ul>
-              {section.list.map((item) => (
-                <li key={item}>{item}</li>
+          <p>{section.description}</p>
+          <div className="oss-list">
+            {section.items.map((item) => (
+              <article className="oss-item" key={`${section.title}-${item.name}`}>
+                <div className="oss-main">
+                  <strong>{item.name}</strong>
+                  {item.href ? (
+                    <a className="oss-link" href={item.href} target="_blank" rel="noreferrer">
+                      {item.href}
+                    </a>
+                  ) : null}
+                </div>
+                <div className="oss-meta">
+                  <span>{item.version}</span>
+                  <span>{item.license}</span>
+                </div>
+              </article>
+            ))}
+          </div>
+          {section.notes?.length ? (
+            <div className="oss-notes">
+              {section.notes.map((note) => (
+                <p key={note}>{note}</p>
               ))}
-            </ul>
+            </div>
           ) : null}
         </section>
       ))}

@@ -77,6 +77,9 @@ export default async function PrivacyPage() {
             <a className="footer-link" href="/terms">
               {footer.terms}
             </a>
+            <a className="footer-link" href="/open-source-licenses">
+              {footer.openSource}
+            </a>
           </div>
         </div>
         <span>© {new Date().getFullYear()} rhkr8521. {footer.copyright}</span>

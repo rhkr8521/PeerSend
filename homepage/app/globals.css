@@ -1645,6 +1645,64 @@ a {
   text-underline-offset: 3px;
 }
 
+.oss-list {
+  display: grid;
+  gap: 14px;
+  margin-top: 18px;
+}
+
+.oss-item {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 16px 18px;
+  border-radius: 20px;
+  border: 1px solid rgba(160, 190, 220, 0.12);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.oss-main {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.oss-main strong {
+  font-size: 1rem;
+  letter-spacing: -0.03em;
+}
+
+.oss-link {
+  color: rgba(147, 166, 191, 0.9);
+  font-size: 0.85rem;
+  word-break: break-all;
+}
+
+.oss-meta {
+  display: grid;
+  gap: 8px;
+  justify-items: end;
+  flex: 0 0 auto;
+  color: rgba(243, 246, 251, 0.92);
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-align: right;
+}
+
+.oss-notes {
+  display: grid;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.oss-notes p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+  line-height: 1.68;
+}
+
 .docs-shell {
   min-height: 100vh;
   width: 100%;
@@ -2089,6 +2147,15 @@ a {
   .docs-section,
   .docs-footer {
     max-width: none;
+  }
+
+  .oss-item {
+    flex-direction: column;
+  }
+
+  .oss-meta {
+    justify-items: start;
+    text-align: left;
   }
 
   .docs-hero {
