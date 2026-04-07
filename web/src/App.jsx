@@ -532,7 +532,9 @@ export default function App() {
   const [pendingFiles, setPendingFiles] = useState([]);
   const [showZipChoice, setShowZipChoice] = useState(false);
   const [showTransferPreparing, setShowTransferPreparing] = useState(false);
-  const [transferPreparingSettled, setTransferPreparingSettled] = useState(false);
+  const [waitingForReceiverConfirm, setWaitingForReceiverConfirm] = useState(false);
+  const [pendingSendNeedsPreparation, setPendingSendNeedsPreparation] = useState(false);
+  const [pendingSendSawProgress, setPendingSendSawProgress] = useState(false);
   const sessionIdRef = useRef(nextId());
   const reconnectTimerRef = useRef(null);
   const launcherProbeTimerRef = useRef(null);
@@ -882,14 +884,51 @@ export default function App() {
   }, [peers, selectedPeerId]);
 
   useEffect(() => {
-    if (!showTransferPreparing || !transferPreparingSettled) {
+    if (!waitingForReceiverConfirm) {
+      if (showTransferPreparing) {
+        setShowTransferPreparing(false);
+      }
       return;
     }
-    if (state.transferProgress || !state.isBusy) {
-      setShowTransferPreparing(false);
-      setTransferPreparingSettled(false);
+
+    if (state.transferProgress) {
+      if (!pendingSendSawProgress) {
+        setPendingSendSawProgress(true);
+      }
+      if (showTransferPreparing) {
+        setShowTransferPreparing(false);
+      }
+      return;
     }
-  }, [showTransferPreparing, transferPreparingSettled, state.isBusy, state.transferProgress]);
+
+    if (!state.isBusy) {
+      setWaitingForReceiverConfirm(false);
+      setPendingSendNeedsPreparation(false);
+      setPendingSendSawProgress(false);
+      if (showTransferPreparing) {
+        setShowTransferPreparing(false);
+      }
+      return;
+    }
+
+    if (pendingSendNeedsPreparation && !pendingSendSawProgress) {
+      if (showTransferPreparing) {
+        setShowTransferPreparing(false);
+      }
+      return;
+    }
+
+    if (!showTransferPreparing) {
+      setShowTransferPreparing(true);
+    }
+  }, [
+    waitingForReceiverConfirm,
+    pendingSendNeedsPreparation,
+    pendingSendSawProgress,
+    showTransferPreparing,
+    state.isBusy,
+    state.transferProgress,
+  ]);
 
   function navigate(path, replace = false) {
     if (path === route) {
@@ -1005,8 +1044,11 @@ export default function App() {
       return;
     }
 
-    setShowTransferPreparing(true);
-    setTransferPreparingSettled(false);
+    const needsLocalPreparation = useZip && files.length > 1;
+    setShowTransferPreparing(false);
+    setWaitingForReceiverConfirm(false);
+    setPendingSendNeedsPreparation(needsLocalPreparation);
+    setPendingSendSawProgress(false);
     try {
       await apiRequest(backendOrigin, "/api/send-files", {
         method: "POST",
@@ -1019,12 +1061,12 @@ export default function App() {
       });
       setPendingFiles([]);
       setShowZipChoice(false);
-      window.setTimeout(() => {
-        setTransferPreparingSettled(true);
-      }, 1200);
+      setWaitingForReceiverConfirm(true);
     } catch (error) {
       setShowTransferPreparing(false);
-      setTransferPreparingSettled(false);
+      setWaitingForReceiverConfirm(false);
+      setPendingSendNeedsPreparation(false);
+      setPendingSendSawProgress(false);
       pushToast(error.message);
     }
   }
