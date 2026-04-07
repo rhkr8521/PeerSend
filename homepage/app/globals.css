@@ -342,6 +342,7 @@ a {
 }
 
 .hero-copy {
+  width: 100%;
   max-width: 46rem;
 }
 
@@ -380,6 +381,39 @@ a {
   width: 100%;
   max-width: 64ch;
   justify-content: flex-end;
+}
+
+@media (max-width: 1480px) and (min-width: 821px) {
+  .hero-section {
+    grid-template-columns: minmax(0, 1.3fr) minmax(280px, 0.7fr);
+    gap: 18px;
+  }
+
+  .hero-copy {
+    max-width: min(100%, 58rem);
+  }
+
+  .hero-copy h1 {
+    max-width: 15.2ch;
+  }
+
+  .hero-description,
+  .hero-actions {
+    max-width: min(100%, 78ch);
+  }
+
+  .experience-spectrum {
+    grid-template-columns: minmax(0, 0.94fr) minmax(0, 1.06fr);
+    gap: 40px;
+  }
+
+  .experience-spectrum .experience-copy {
+    justify-self: start;
+    width: 100%;
+    max-width: 36rem;
+    margin-left: 0;
+    text-align: left;
+  }
 }
 
 .mobile-hero {
@@ -1873,6 +1907,36 @@ a {
   margin: 36px auto 0;
 }
 
+.not-found-shell {
+  display: flex;
+  flex-direction: column;
+}
+
+.not-found-hero {
+  flex: 1;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  text-align: center;
+  min-height: calc(100vh - 320px);
+}
+
+.not-found-hero h1,
+.not-found-hero p,
+.not-found-hero .section-tag {
+  text-align: center;
+}
+
+.not-found-hero p {
+  max-width: 36rem;
+  justify-self: start;
+  text-align: left;
+}
+
+.not-found-shell .docs-footer {
+  margin-top: auto;
+}
+
 .docs-code {
   overflow-x: auto;
   margin: 18px 0 0;
@@ -2062,6 +2126,14 @@ a {
   .experience-engine,
   .engine-grid {
     grid-template-columns: 1fr;
+  }
+
+  .experience-spectrum > .experience-copy {
+    order: -1;
+    justify-self: start;
+    width: 100%;
+    max-width: none;
+    margin-left: 0;
   }
 
   .hero-stage {

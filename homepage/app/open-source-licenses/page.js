@@ -7,6 +7,8 @@ export const metadata = {
   description: "Open source licenses used by PeerSend",
 };
 
+export const dynamic = "force-dynamic";
+
 export default async function OpenSourceLicensesPage() {
   const requestHeaders = await headers();
   const locale = detectLocaleFromLanguage(requestHeaders.get("accept-language"));

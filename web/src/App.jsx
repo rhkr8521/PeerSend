@@ -531,7 +531,6 @@ export default function App() {
   const [toasts, setToasts] = useState([]);
   const [pendingFiles, setPendingFiles] = useState([]);
   const [showZipChoice, setShowZipChoice] = useState(false);
-  const [showTransferPreparing, setShowTransferPreparing] = useState(false);
   const [waitingForReceiverConfirm, setWaitingForReceiverConfirm] = useState(false);
   const [pendingSendNeedsPreparation, setPendingSendNeedsPreparation] = useState(false);
   const [pendingSendSawProgress, setPendingSendSawProgress] = useState(false);
@@ -553,6 +552,11 @@ export default function App() {
   const peers = state.mode === "tunnel" ? state.tunnelPeers : state.lanPeers;
   const selectedPeer = peers.find((peer) => peer.id === selectedPeerId) || null;
   const showApp = engineConnected && route === APP_ROUTE;
+  const showTransferPreparing =
+    waitingForReceiverConfirm &&
+    !state.transferProgress &&
+    state.isBusy &&
+    (!pendingSendNeedsPreparation || pendingSendSawProgress);
 
   useEffect(() => {
     document.title = t("app_name");
@@ -885,18 +889,12 @@ export default function App() {
 
   useEffect(() => {
     if (!waitingForReceiverConfirm) {
-      if (showTransferPreparing) {
-        setShowTransferPreparing(false);
-      }
       return;
     }
 
     if (state.transferProgress) {
       if (!pendingSendSawProgress) {
         setPendingSendSawProgress(true);
-      }
-      if (showTransferPreparing) {
-        setShowTransferPreparing(false);
       }
       return;
     }
@@ -905,30 +903,8 @@ export default function App() {
       setWaitingForReceiverConfirm(false);
       setPendingSendNeedsPreparation(false);
       setPendingSendSawProgress(false);
-      if (showTransferPreparing) {
-        setShowTransferPreparing(false);
-      }
-      return;
     }
-
-    if (pendingSendNeedsPreparation && !pendingSendSawProgress) {
-      if (showTransferPreparing) {
-        setShowTransferPreparing(false);
-      }
-      return;
-    }
-
-    if (!showTransferPreparing) {
-      setShowTransferPreparing(true);
-    }
-  }, [
-    waitingForReceiverConfirm,
-    pendingSendNeedsPreparation,
-    pendingSendSawProgress,
-    showTransferPreparing,
-    state.isBusy,
-    state.transferProgress,
-  ]);
+  }, [waitingForReceiverConfirm, pendingSendSawProgress, state.isBusy, state.transferProgress]);
 
   function navigate(path, replace = false) {
     if (path === route) {
@@ -1045,7 +1021,6 @@ export default function App() {
     }
 
     const needsLocalPreparation = useZip && files.length > 1;
-    setShowTransferPreparing(false);
     setWaitingForReceiverConfirm(false);
     setPendingSendNeedsPreparation(needsLocalPreparation);
     setPendingSendSawProgress(false);
@@ -1063,7 +1038,6 @@ export default function App() {
       setShowZipChoice(false);
       setWaitingForReceiverConfirm(true);
     } catch (error) {
-      setShowTransferPreparing(false);
       setWaitingForReceiverConfirm(false);
       setPendingSendNeedsPreparation(false);
       setPendingSendSawProgress(false);

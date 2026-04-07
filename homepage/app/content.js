@@ -764,3 +764,24 @@ export const termsContent = {
     ],
   },
 };
+
+export const notFoundContent = {
+  ko: {
+    metaTitle: "페이지를 찾을 수 없습니다",
+    metaDescription: "요청한 페이지를 찾을 수 없습니다.",
+    tag: "404 Not Found",
+    title: "페이지를 찾을 수 없습니다",
+    intro: "입력한 주소가 변경되었거나 삭제되었을 수 있습니다.",
+    home: "홈으로",
+    download: "다운로드로 이동",
+  },
+  en: {
+    metaTitle: "Page not found",
+    metaDescription: "The page you requested could not be found.",
+    tag: "404 Not Found",
+    title: "Page not found",
+    intro: "The address may have changed or the page may no longer exist.",
+    home: "Back to Home",
+    download: "Go to Download",
+  },
+};

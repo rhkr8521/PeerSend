@@ -1218,7 +1218,8 @@ end try
                                 self.tr("progress_zip_item", filename=arc, index=index, count=len(file_paths)),
                             )
         finally:
-            self.clear_progress()
+            # ZIP 준비가 끝난 뒤에도 상대방 응답을 기다리는 동안은 busy 상태를 유지한다.
+            self.clear_progress(preserve_busy=True)
         if self.cancel_flag:
             raise RuntimeError("CANCELED_BY_USER")
 
@@ -1535,11 +1536,13 @@ end try
             self._last_progress_emit = now
             self.emit_state()
 
-    def clear_progress(self) -> None:
+    def clear_progress(self, *, preserve_busy: bool = False) -> None:
         with self._lock:
             self.transfer_progress = None
             self.total_size = 0
             self.total_bytes_done = 0
             self.start_time_total = 0.0
             self._last_progress_emit = 0.0
+            if preserve_busy:
+                self._busy_reserved = True
         self.emit_state()
