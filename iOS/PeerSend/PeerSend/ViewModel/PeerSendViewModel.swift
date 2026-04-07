@@ -148,11 +148,8 @@ final class PeerSendViewModel: ObservableObject {
         publish {
             self.saveLocationLabel = self.storage.saveLocationLabel()
         }
-        let notificationsGranted = await notifications.authorizationGranted()
-        if !notificationsGranted {
-            publish { self.blockingPrompt = .notificationPermission }
-            return
-        }
+        let notificationStatus = await notifications.authorizationStatus()
+        let shouldOfferNotificationPrompt = notificationStatus == .notDetermined && !preferences.notificationPromptDismissed
 
         if !hasCheckedForUpdate {
             hasCheckedForUpdate = true
@@ -165,6 +162,19 @@ final class PeerSendViewModel: ObservableObject {
         }
 
         publish {
+            if shouldOfferNotificationPrompt {
+                if self.blockingPrompt == nil {
+                    self.blockingPrompt = .notificationPermission
+                }
+            } else if case .notificationPermission = self.blockingPrompt {
+                self.blockingPrompt = nil
+            }
+        }
+    }
+
+    func dismissNotificationPermissionPrompt() {
+        preferences.persistNotificationPromptDismissed(true)
+        publish {
             if case .notificationPermission = self.blockingPrompt {
                 self.blockingPrompt = nil
             }
@@ -176,11 +186,16 @@ final class PeerSendViewModel: ObservableObject {
             guard let self else { return }
             let centerGranted = await self.notifications.authorizationGranted()
             let granted = centerGranted ? centerGranted : await self.notifications.requestAuthorization()
+            await MainActor.run {
+                self.preferences.persistNotificationPromptDismissed(true)
+            }
             if granted {
                 await self.refreshStartupPrompts()
             } else {
                 await MainActor.run {
-                    self.openSettings()
+                    if case .notificationPermission = self.blockingPrompt {
+                        self.blockingPrompt = nil
+                    }
                 }
             }
         }

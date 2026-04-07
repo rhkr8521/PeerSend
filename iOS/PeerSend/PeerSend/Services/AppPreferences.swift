@@ -15,6 +15,7 @@ final class AppPreferences {
         static let tunnelSubdomain = "tunnel_subdomain"
         static let lanNameSuffix = "lan_name_suffix"
         static let saveFolderBookmark = "save_folder_bookmark"
+        static let notificationPromptDismissed = "notification_prompt_dismissed"
     }
 
     var savedTunnelHost: String {
@@ -53,6 +54,10 @@ final class AppPreferences {
         defaults.string(forKey: Key.lanNameSuffix)
     }
 
+    var notificationPromptDismissed: Bool {
+        defaults.object(forKey: Key.notificationPromptDismissed) as? Bool ?? false
+    }
+
     func saveTunnel(host: String, ssl: Bool, token: String, usePublic: Bool) {
         defaults.set(host, forKey: Key.tunnelHost)
         defaults.set(ssl, forKey: Key.tunnelSSL)
@@ -71,6 +76,10 @@ final class AppPreferences {
 
     func persistLanNameSuffix(_ value: String) {
         defaults.set(value, forKey: Key.lanNameSuffix)
+    }
+
+    func persistNotificationPromptDismissed(_ value: Bool) {
+        defaults.set(value, forKey: Key.notificationPromptDismissed)
     }
 
     func persistSaveFolderBookmark(_ bookmark: Data?) {

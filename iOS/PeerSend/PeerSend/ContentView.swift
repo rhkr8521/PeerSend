@@ -264,7 +264,9 @@ struct ContentView: View {
                         title: L10n.notificationPermissionTitle,
                         message: L10n.notificationPermissionBody,
                         primaryTitle: L10n.notificationPermissionAllow,
-                        primaryAction: viewModel.requestNotificationPermission
+                        primaryAction: viewModel.requestNotificationPermission,
+                        secondaryTitle: L10n.notificationPermissionLater,
+                        secondaryAction: viewModel.dismissNotificationPermissionPrompt
                     )
                 case .updateRequired(let info):
                     BlockingDialog(
@@ -803,6 +805,24 @@ private struct BlockingDialog: View {
     let message: String
     let primaryTitle: String
     let primaryAction: () -> Void
+    let secondaryTitle: String?
+    let secondaryAction: (() -> Void)?
+
+    init(
+        title: String,
+        message: String,
+        primaryTitle: String,
+        primaryAction: @escaping () -> Void,
+        secondaryTitle: String? = nil,
+        secondaryAction: (() -> Void)? = nil
+    ) {
+        self.title = title
+        self.message = message
+        self.primaryTitle = primaryTitle
+        self.primaryAction = primaryAction
+        self.secondaryTitle = secondaryTitle
+        self.secondaryAction = secondaryAction
+    }
 
     var body: some View {
         DialogCard {
@@ -811,7 +831,14 @@ private struct BlockingDialog: View {
                     .font(.headline)
                 Text(message)
                     .font(.body)
-                PrimaryButton(title: primaryTitle, enabled: true, action: primaryAction)
+                if let secondaryTitle, let secondaryAction {
+                    HStack(spacing: 10) {
+                        SecondaryButton(title: secondaryTitle, action: secondaryAction)
+                        PrimaryButton(title: primaryTitle, enabled: true, action: primaryAction)
+                    }
+                } else {
+                    PrimaryButton(title: primaryTitle, enabled: true, action: primaryAction)
+                }
             }
         }
     }

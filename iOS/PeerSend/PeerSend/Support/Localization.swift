@@ -89,11 +89,12 @@ enum L10n {
     }
     static var initialTunnelChoicePublic: String { isKorean ? "공개 터널 이용" : "Use Public Tunnel" }
     static var initialTunnelChoiceExternal: String { isKorean ? "외부 서버 설정" : "Set External Server" }
-    static var notificationPermissionTitle: String { isKorean ? "알림 권한 필요" : "Allow Notifications" }
+    static var notificationPermissionTitle: String { isKorean ? "알림 허용" : "Allow Notifications" }
     static var notificationPermissionBody: String {
-        isKorean ? "전송 진행 상태와 수신 요청을 확인하려면 알림 권한이 허용되어야 합니다." : "To monitor transfer progress and incoming requests, notifications must be allowed."
+        isKorean ? "알림을 허용하면 백그라운드에서 수신 요청과 전송 상태를 더 쉽게 확인할 수 있습니다. 알림 없이도 앱을 사용할 수 있습니다." : "Allow notifications to more easily check incoming requests and transfer status in the background. You can still use the app without notifications."
     }
-    static var notificationPermissionAllow: String { isKorean ? "권한 허용" : "Allow Permission" }
+    static var notificationPermissionAllow: String { isKorean ? "허용" : "Allow" }
+    static var notificationPermissionLater: String { isKorean ? "나중에" : "Not Now" }
     static var openSettings: String { isKorean ? "설정 열기" : "Open Settings" }
     static var updateRequiredTitle: String { isKorean ? "업데이트 필요" : "Update Required" }
     static var updateRequiredBody: String {

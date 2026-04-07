@@ -8,9 +8,14 @@ final class PeerSendNotificationManager {
     private let incomingRequestID = "incoming-request"
     private let transferStatusID = "transfer-status"
 
-    func authorizationGranted() async -> Bool {
+    func authorizationStatus() async -> UNAuthorizationStatus {
         let settings = await center.notificationSettings()
-        return settings.authorizationStatus == .authorized || settings.authorizationStatus == .provisional
+        return settings.authorizationStatus
+    }
+
+    func authorizationGranted() async -> Bool {
+        let status = await authorizationStatus()
+        return status == .authorized || status == .provisional
     }
 
     func requestAuthorization() async -> Bool {
@@ -46,4 +51,3 @@ final class PeerSendNotificationManager {
         center.add(notification)
     }
 }
-
