@@ -157,8 +157,14 @@ def _detect_language() -> str:
             candidates.append(locale.windows_locale.get(lang_id))
         except Exception:
             pass
-    text = " ".join(str(candidate or "") for candidate in candidates).lower()
-    return "ko" if re.search(r"(^|[^a-z])ko(?:[-_][a-z0-9]+)?([^a-z]|$)", text) or "korean" in text else "en"
+    primary = ""
+    for candidate in candidates:
+        value = str(candidate or "").strip()
+        if not value:
+            continue
+        primary = value.split(",")[0].split(";")[0].strip().lower()
+        break
+    return "ko" if primary.startswith("ko") or primary.startswith("korean") else "en"
 
 
 def _escape_applescript_string(value: str) -> str:

@@ -283,26 +283,26 @@ const COPY = {
   },
 };
 
-function detectLanguage(value) {
+function extractPrimaryLanguage(value) {
   if (Array.isArray(value)) {
-    return value.some((item) => String(item || "").toLowerCase().startsWith("ko")) ? "ko" : "en";
+    const primary = value.find((item) => String(item || "").trim());
+    return String(primary || "").trim();
   }
-  return String(value || "").toLowerCase().startsWith("ko") ? "ko" : "en";
+  return String(value || "")
+    .split(",")[0]
+    .split(";")[0]
+    .trim();
+}
+
+function detectLanguage(value) {
+  return extractPrimaryLanguage(value).toLowerCase().startsWith("ko") ? "ko" : "en";
 }
 
 function detectBrowserLanguage() {
-  const candidates = [];
   if (Array.isArray(navigator.languages) && navigator.languages.length) {
-    candidates.push(...navigator.languages);
+    return detectLanguage(navigator.languages[0]);
   }
-  candidates.push(navigator.language);
-  candidates.push(document.documentElement.lang);
-  try {
-    candidates.push(Intl.DateTimeFormat().resolvedOptions().locale);
-  } catch {
-    // ignore locale probing failures
-  }
-  return detectLanguage(candidates);
+  return detectLanguage(navigator.language || document.documentElement.lang);
 }
 
 function detectDesktopPlatform(userAgent, platform) {
@@ -546,13 +546,7 @@ export default function App() {
   const [engineApiToken, setEngineApiToken] = useState("");
 
   const backendOrigin = isDirectEngineOrigin ? window.location.origin : LOCAL_ORIGIN;
-  const engineLanguage = detectLanguage(state.language);
-  const language =
-    browserLanguage === "ko" || engineLanguage === "ko"
-      ? "ko"
-      : engineConnected
-        ? state.language || browserLanguage
-        : browserLanguage;
+  const language = browserLanguage;
   const t = useMemo(() => createTranslator(language), [language]);
   const peers = state.mode === "tunnel" ? state.tunnelPeers : state.lanPeers;
   const selectedPeer = peers.find((peer) => peer.id === selectedPeerId) || null;
