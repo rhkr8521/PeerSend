@@ -1,3 +1,8 @@
+export function normalizeLocale(value) {
+  const normalized = String(value || "").trim().toLowerCase();
+  return normalized.startsWith("ko") ? "ko" : normalized ? "en" : "";
+}
+
 function extractPrimaryLanguage(value) {
   if (!value) {
     return "";
@@ -14,9 +19,19 @@ function extractPrimaryLanguage(value) {
     .trim();
 }
 
+export function detectLocale(preferredValue, fallbackValue = "") {
+  return normalizeLocale(preferredValue) || normalizeLocale(extractPrimaryLanguage(fallbackValue)) || "en";
+}
+
 export function detectLocaleFromLanguage(value) {
-  const primary = extractPrimaryLanguage(value).toLowerCase();
-  return primary.startsWith("ko") ? "ko" : "en";
+  return detectLocale("", value);
+}
+
+export function withLocalePath(path, locale) {
+  const targetLocale = normalizeLocale(locale) || "en";
+  const [base, hash = ""] = String(path || "").split("#");
+  const separator = base.includes("?") ? "&" : "?";
+  return `${base}${separator}lang=${targetLocale}${hash ? `#${hash}` : ""}`;
 }
 
 export function detectLocaleFromNavigator() {
@@ -24,10 +39,20 @@ export function detectLocaleFromNavigator() {
     return "en";
   }
 
+  try {
+    const url = new URL(window.location.href);
+    const queryLocale = url.searchParams.get("lang");
+    if (queryLocale) {
+      return detectLocale(queryLocale);
+    }
+  } catch {
+    // ignore URL parsing failures
+  }
+
   const primary =
     Array.isArray(window.navigator.languages) && window.navigator.languages.length > 0
       ? window.navigator.languages[0]
       : window.navigator.language;
 
-  return detectLocaleFromLanguage(primary);
+  return detectLocale("", primary);
 }

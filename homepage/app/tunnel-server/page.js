@@ -1,6 +1,7 @@
 import { headers } from "next/headers";
 import { landingContent, tunnelServerContent } from "../content";
-import { detectLocaleFromLanguage } from "../locale";
+import { detectLocale, withLocalePath } from "../locale";
+import SiteFooter from "../components/SiteFooter";
 
 const serverSetupCommands = `# GPG public key
 curl -fsSL https://rhkr8521.github.io/Tunneler/tunneler-apt-public.key | sudo gpg --dearmor -o /usr/share/keyrings/tunneler-archive-keyring.gpg
@@ -29,28 +30,29 @@ export const metadata = {
   description: "PeerSend Tunnel Server Guide",
 };
 
-export default async function TunnelServerPage() {
+export default async function TunnelServerPage({ searchParams }) {
   const requestHeaders = await headers();
-  const locale = detectLocaleFromLanguage(requestHeaders.get("accept-language"));
+  const params = await searchParams;
+  const locale = detectLocale(params?.lang, requestHeaders.get("accept-language"));
   const content = tunnelServerContent[locale];
   const footer = landingContent[locale].footer;
 
   return (
     <main className="docs-shell">
       <header className="docs-topbar desktop-only">
-        <a className="docs-brand" href="/">
+        <a className="docs-brand" href={withLocalePath("/", locale)}>
           PeerSend
         </a>
         <nav className="docs-nav">
-          <a href="/">{content.home}</a>
+          <a href={withLocalePath("/", locale)}>{content.home}</a>
         </nav>
       </header>
 
       <header className="docs-mobile-topbar mobile-only">
-        <a className="docs-mobile-brand" href="/">
+        <a className="docs-mobile-brand" href={withLocalePath("/", locale)}>
           PeerSend
         </a>
-        <a className="docs-mobile-home" href="/">
+        <a className="docs-mobile-home" href={withLocalePath("/", locale)}>
           {content.home}
         </a>
       </header>
@@ -131,24 +133,7 @@ export default async function TunnelServerPage() {
         </div>
       </section>
 
-      <footer className="site-footer docs-footer">
-        <div className="footer-copy">
-          <strong>{footer.brand}</strong>
-          <p>{footer.body}</p>
-          <div className="footer-links">
-            <a className="footer-link" href="/privacy">
-              {footer.privacy}
-            </a>
-            <a className="footer-link" href="/terms">
-              {footer.terms}
-            </a>
-            <a className="footer-link" href="/open-source-licenses">
-              {footer.openSource}
-            </a>
-          </div>
-        </div>
-        <span>© {new Date().getFullYear()} rhkr8521. {footer.copyright}</span>
-      </footer>
+      <SiteFooter footer={footer} locale={locale} />
     </main>
   );
 }

@@ -1,34 +1,36 @@
 import { headers } from "next/headers";
 import { landingContent, termsContent } from "../content";
-import { detectLocaleFromLanguage } from "../locale";
+import { detectLocale, withLocalePath } from "../locale";
+import SiteFooter from "../components/SiteFooter";
 
 export const metadata = {
   title: "PeerSend Terms of Service",
   description: "PeerSend Terms of Service",
 };
 
-export default async function TermsPage() {
+export default async function TermsPage({ searchParams }) {
   const requestHeaders = await headers();
-  const locale = detectLocaleFromLanguage(requestHeaders.get("accept-language"));
+  const params = await searchParams;
+  const locale = detectLocale(params?.lang, requestHeaders.get("accept-language"));
   const content = termsContent[locale];
   const footer = landingContent[locale].footer;
 
   return (
     <main className="docs-shell">
       <header className="docs-topbar desktop-only">
-        <a className="docs-brand" href="/">
+        <a className="docs-brand" href={withLocalePath("/", locale)}>
           PeerSend
         </a>
         <nav className="docs-nav">
-          <a href="/">{content.home}</a>
+          <a href={withLocalePath("/", locale)}>{content.home}</a>
         </nav>
       </header>
 
       <header className="docs-mobile-topbar mobile-only">
-        <a className="docs-mobile-brand" href="/">
+        <a className="docs-mobile-brand" href={withLocalePath("/", locale)}>
           PeerSend
         </a>
-        <a className="docs-mobile-home" href="/">
+        <a className="docs-mobile-home" href={withLocalePath("/", locale)}>
           {content.home}
         </a>
       </header>
@@ -62,24 +64,7 @@ export default async function TermsPage() {
         </section>
       ))}
 
-      <footer className="site-footer docs-footer">
-        <div className="footer-copy">
-          <strong>{footer.brand}</strong>
-          <p>{footer.body}</p>
-          <div className="footer-links">
-            <a className="footer-link" href="/privacy">
-              {footer.privacy}
-            </a>
-            <a className="footer-link" href="/terms">
-              {footer.terms}
-            </a>
-            <a className="footer-link" href="/open-source-licenses">
-              {footer.openSource}
-            </a>
-          </div>
-        </div>
-        <span>© {new Date().getFullYear()} rhkr8521. {footer.copyright}</span>
-      </footer>
+      <SiteFooter footer={footer} locale={locale} />
     </main>
   );
 }

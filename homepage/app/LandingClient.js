@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { landingContent } from "./content";
-import { detectLocaleFromNavigator } from "./locale";
+import { detectLocaleFromNavigator, withLocalePath } from "./locale";
+import SiteFooter from "./components/SiteFooter";
 
 const transferScenes = [
   {
@@ -354,7 +355,7 @@ export default function LandingClient({ initialLocale = "en" }) {
           <a href="#experience">{content.nav.experience}</a>
           <a href="#download">{content.nav.download}</a>
         </nav>
-        <a className="topbar-action" href="/tunnel-server">
+        <a className="topbar-action" href={withLocalePath("/tunnel-server", locale)}>
           {content.nav.tunnelServer}
         </a>
       </header>
@@ -402,7 +403,7 @@ export default function LandingClient({ initialLocale = "en" }) {
           <a href="#download" onClick={() => setMobileMenuOpen(false)}>
             {content.nav.download}
           </a>
-          <a href="/tunnel-server" onClick={() => setMobileMenuOpen(false)}>
+          <a href={withLocalePath("/tunnel-server", locale)} onClick={() => setMobileMenuOpen(false)}>
             {content.nav.tunnelServer}
           </a>
         </nav>
@@ -592,24 +593,7 @@ export default function LandingClient({ initialLocale = "en" }) {
         </section>
       </section>
 
-      <footer className="site-footer">
-        <div className="footer-copy">
-          <strong>{content.footer.brand}</strong>
-          <p>{content.footer.body}</p>
-          <div className="footer-links">
-            <a className="footer-link" href="/privacy">
-              {content.footer.privacy}
-            </a>
-            <a className="footer-link" href="/terms">
-              {content.footer.terms}
-            </a>
-            <a className="footer-link" href="/open-source-licenses">
-              {content.footer.openSource}
-            </a>
-          </div>
-        </div>
-        <span>© {new Date().getFullYear()} rhkr8521. {content.footer.copyright}</span>
-      </footer>
+      <SiteFooter footer={content.footer} locale={locale} />
     </main>
   );
 }

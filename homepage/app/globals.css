@@ -1660,6 +1660,13 @@ a {
   gap: 8px;
 }
 
+.footer-brand-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
 .footer-links {
   display: inline-flex;
   align-items: center;
@@ -1677,6 +1684,44 @@ a {
   font-weight: 500;
   text-decoration: underline;
   text-underline-offset: 3px;
+}
+
+.footer-meta {
+  display: grid;
+  justify-items: end;
+  gap: 8px;
+  color: rgba(147, 166, 191, 0.78);
+  font-size: 0.8rem;
+}
+
+.footer-copyright {
+  display: block;
+  width: 100%;
+  text-align: center;
+}
+
+.footer-locale-switcher {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.footer-locale-button {
+  border: 0;
+  background: transparent;
+  color: rgba(147, 166, 191, 0.72);
+  font: inherit;
+  cursor: pointer;
+  padding: 0;
+  transition: color 180ms ease;
+}
+
+.footer-locale-button:hover {
+  color: rgba(243, 247, 255, 0.92);
+}
+
+.footer-locale-button.is-active {
+  color: rgba(243, 247, 255, 0.96);
 }
 
 .oss-list {
@@ -1903,8 +1948,9 @@ a {
 }
 
 .docs-footer {
-  max-width: 980px;
-  margin: 36px auto 0;
+  max-width: none;
+  width: 100%;
+  margin: 36px 0 0;
 }
 
 .not-found-shell {
@@ -2415,7 +2461,25 @@ a {
     gap: 10px;
   }
 
+  .footer-copy {
+    width: 100%;
+  }
+
   .footer-links {
     gap: 10px;
+  }
+
+  .footer-brand-row {
+    width: 100%;
+  }
+
+  .footer-meta {
+    width: 100%;
+    justify-items: center;
+    text-align: center;
+  }
+
+  .footer-locale-switcher {
+    justify-content: flex-end;
   }
 }
