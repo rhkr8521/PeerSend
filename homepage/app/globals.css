@@ -135,6 +135,7 @@ a {
 .brand-wrap {
   display: flex;
   align-items: center;
+  flex: 1;
 }
 
 .brand-wordmark {
@@ -178,6 +179,248 @@ a {
 
 .topbar-action:hover {
   background: rgba(255, 255, 255, 0.08);
+}
+
+.topbar-right {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  flex: 1;
+}
+
+/* ── Tunnel Status Button ── */
+@keyframes dotPulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.45; transform: scale(0.75); }
+}
+
+@keyframes dotSpinner {
+  0% { transform: scale(1); opacity: 1; }
+  33% { transform: scale(0.7); opacity: 0.5; }
+  66% { transform: scale(1.1); opacity: 0.8; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.tunnel-status-wrap {
+  position: relative;
+}
+
+.tunnel-status-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 38px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(160, 190, 220, 0.18);
+  background: rgba(255, 255, 255, 0.04);
+  color: #e8effa;
+  font-family: inherit;
+  font-size: 0.88rem;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 160ms ease, border-color 160ms ease;
+}
+
+.tunnel-status-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(160, 190, 220, 0.28);
+}
+
+.tunnel-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.dot-online {
+  background: #4ade80;
+  box-shadow: 0 0 6px rgba(74, 222, 128, 0.7);
+  animation: dotPulse 2s ease-in-out infinite;
+}
+
+.dot-offline {
+  background: #f87171;
+  box-shadow: 0 0 6px rgba(248, 113, 113, 0.6);
+}
+
+.dot-checking {
+  background: #facc15;
+  box-shadow: 0 0 6px rgba(250, 204, 21, 0.6);
+  animation: dotSpinner 1.2s ease-in-out infinite;
+}
+
+.tunnel-panel-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 39;
+}
+
+.tunnel-panel {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  z-index: 40;
+  min-width: 260px;
+  padding: 18px 18px 14px;
+  border: 1px solid rgba(160, 190, 220, 0.14);
+  border-radius: 18px;
+  background: rgba(8, 18, 34, 0.92);
+  backdrop-filter: blur(22px);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.4);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.tunnel-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.tunnel-panel-head strong {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.tunnel-close-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255, 255, 255, 0.07);
+  color: var(--muted);
+  font-size: 0.7rem;
+  cursor: pointer;
+  transition: background 140ms ease, color 140ms ease;
+  flex-shrink: 0;
+}
+
+.tunnel-close-btn:hover {
+  background: rgba(255, 255, 255, 0.13);
+  color: var(--text);
+}
+
+.tunnel-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(160, 190, 220, 0.08);
+}
+
+.tunnel-row:last-of-type {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.tunnel-row-label {
+  font-size: 0.8rem;
+  color: var(--muted);
+  font-weight: 500;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.tunnel-row-value {
+  font-size: 0.82rem;
+  color: var(--text);
+  font-weight: 600;
+  text-align: right;
+  word-break: break-all;
+}
+
+.tunnel-row-addr {
+  font-size: 0.76rem;
+  color: var(--sky);
+  font-family: "SF Mono", "Fira Code", monospace;
+  font-weight: 500;
+}
+
+.tunnel-row-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.tunnel-refresh-btn {
+  width: 100%;
+  padding: 9px 0;
+  border-radius: 10px;
+  border: 1px solid rgba(160, 190, 220, 0.14);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 0.84rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 140ms ease;
+  margin-top: 2px;
+}
+
+.tunnel-refresh-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.tunnel-refresh-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.tunnel-outage-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 9px 0;
+  border-radius: 10px;
+  border: 1px solid rgba(248, 113, 113, 0.25);
+  background: rgba(248, 113, 113, 0.07);
+  color: #fca5a5;
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background 140ms ease, border-color 140ms ease;
+}
+
+.tunnel-outage-link:hover {
+  background: rgba(248, 113, 113, 0.14);
+  border-color: rgba(248, 113, 113, 0.4);
+}
+
+.mobile-nav-tunnel-status {
+  padding: 6px 0 2px;
+  border-top: 1px solid rgba(160, 190, 220, 0.08);
+  margin-top: 4px;
+}
+
+.mobile-nav-tunnel-status .tunnel-status-wrap {
+  width: 100%;
+}
+
+.mobile-nav-tunnel-status .tunnel-status-btn {
+  width: 100%;
+  border-radius: 12px;
+  justify-content: flex-start;
+  font-weight: 600;
+}
+
+.mobile-nav-tunnel-status .tunnel-panel {
+  position: static;
+  margin-top: 10px;
+  box-shadow: none;
+  border-radius: 14px;
 }
 
 .mobile-topbar {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { SiGoogleplay, SiAppstore } from "react-icons/si";
 import { landingContent } from "./content";
 import { detectLocaleFromNavigator, withLocalePath } from "./locale";
@@ -331,6 +331,93 @@ function MobileExperienceBand({ band }) {
   );
 }
 
+function TunnelStatusButton({ locale }) {
+  const [open, setOpen] = useState(false);
+  const [status, setStatus] = useState("checking");
+  const [latency, setLatency] = useState(null);
+  const [lastChecked, setLastChecked] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  const check = useCallback(async () => {
+    setLoading(true);
+    setStatus("checking");
+    try {
+      const res = await fetch("/api/tunnel-status");
+      const json = await res.json();
+      setStatus(json.status);
+      setLatency(json.latency ?? null);
+      setLastChecked(new Date());
+    } catch {
+      setStatus("offline");
+      setLatency(null);
+      setLastChecked(new Date());
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    check();
+  }, [check]);
+
+  const label = locale === "ko" ? "공개 터널 상태" : "Tunnel Status";
+  const statusLabel = { checking: locale === "ko" ? "확인 중" : "Checking", online: locale === "ko" ? "온라인" : "Online", offline: locale === "ko" ? "오프라인" : "Offline" }[status];
+
+  const formatTime = (date) => {
+    if (!date) return "-";
+    return date.toLocaleTimeString(locale === "ko" ? "ko-KR" : "en-US", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  };
+
+  return (
+    <div className="tunnel-status-wrap">
+      <button type="button" className="tunnel-status-btn" onClick={() => setOpen((prev) => !prev)} aria-expanded={open}>
+        <span className={`tunnel-dot dot-${status}`} />
+        {label}
+      </button>
+      {open && (
+        <>
+          <div className="tunnel-panel-backdrop" onClick={() => setOpen(false)} />
+          <div className="tunnel-panel">
+            <div className="tunnel-panel-head">
+              <strong>{locale === "ko" ? "터널 서버 상태" : "Tunnel Server"}</strong>
+              <button type="button" className="tunnel-close-btn" onClick={() => setOpen(false)}>✕</button>
+            </div>
+            <div className="tunnel-row">
+              <span className="tunnel-row-label">{locale === "ko" ? "상태" : "Status"}</span>
+              <span className={`tunnel-row-value tunnel-row-status status-${status}`}>
+                <span className={`tunnel-dot dot-${status}`} />
+                {statusLabel}
+              </span>
+            </div>
+            {latency !== null && (
+              <div className="tunnel-row">
+                <span className="tunnel-row-label">{locale === "ko" ? "응답 속도" : "Latency"}</span>
+                <span className="tunnel-row-value">{latency}ms</span>
+              </div>
+            )}
+            <div className="tunnel-row">
+              <span className="tunnel-row-label">{locale === "ko" ? "마지막 확인" : "Last checked"}</span>
+              <span className="tunnel-row-value">{formatTime(lastChecked)}</span>
+            </div>
+            <button type="button" className="tunnel-refresh-btn" onClick={check} disabled={loading}>
+              {loading ? (locale === "ko" ? "확인 중..." : "Checking...") : (locale === "ko" ? "새로고침" : "Refresh")}
+            </button>
+            {status === "offline" && (
+              <a className="tunnel-outage-link" href={withLocalePath("/notice", locale)}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.8" />
+                  <path d="M12 8v4M12 16h.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                </svg>
+                {locale === "ko" ? "장애 공지사항 확인하기" : "View outage notices"}
+              </a>
+            )}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 export default function LandingClient({ initialLocale = "en" }) {
   const [locale, setLocale] = useState(initialLocale === "ko" ? "ko" : "en");
   const [sceneIndex, setSceneIndex] = useState(0);
@@ -394,9 +481,12 @@ export default function LandingClient({ initialLocale = "en" }) {
           <a href="#download">{content.nav.download}</a>
           <a href={withLocalePath("/notice", locale)}>{content.nav.notice}</a>
         </nav>
-        <a className="topbar-action" href={withLocalePath("/tunnel-server", locale)}>
-          {content.nav.tunnelServer}
-        </a>
+        <div className="topbar-right">
+          <TunnelStatusButton locale={locale} />
+          <a className="topbar-action" href={withLocalePath("/tunnel-server", locale)}>
+            {content.nav.tunnelServer}
+          </a>
+        </div>
       </header>
 
       <header className="mobile-topbar mobile-only">
@@ -448,6 +538,9 @@ export default function LandingClient({ initialLocale = "en" }) {
           <a href={withLocalePath("/tunnel-server", locale)} onClick={() => setMobileMenuOpen(false)}>
             {content.nav.tunnelServer}
           </a>
+          <div className="mobile-nav-tunnel-status">
+            <TunnelStatusButton locale={locale} />
+          </div>
         </nav>
       </div>
 
