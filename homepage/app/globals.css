@@ -378,6 +378,53 @@ a {
   cursor: not-allowed;
 }
 
+.tunnel-unstable-msg {
+  margin: -2px 0 2px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgba(250, 204, 21, 0.07);
+  border: 1px solid rgba(250, 204, 21, 0.2);
+  color: #fde68a;
+  font-size: 0.78rem;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.tunnel-weekly {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.tunnel-weekly-label {
+  font-size: 0.76rem;
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.tunnel-weekly-bars {
+  display: flex;
+  gap: 3px;
+  align-items: flex-end;
+}
+
+.tunnel-week-bar {
+  flex: 1;
+  height: 22px;
+  border-radius: 4px;
+  cursor: default;
+  transition: opacity 120ms ease;
+}
+
+.tunnel-week-bar:hover {
+  opacity: 0.75;
+}
+
+.wbar-green   { background: rgba(74, 222, 128, 0.65); }
+.wbar-yellow  { background: rgba(250, 204, 21, 0.65); }
+.wbar-red     { background: rgba(248, 113, 113, 0.65); }
+.wbar-unknown { background: rgba(160, 190, 220, 0.13); border: 1px solid rgba(160, 190, 220, 0.1); }
+
 .tunnel-outage-link {
   display: flex;
   align-items: center;
@@ -2740,6 +2787,11 @@ a {
 
 .docs-code.compact {
   margin-top: 0;
+  font-size: 0.82rem;
+}
+
+.docs-code.compact code {
+  font-size: 0.82rem;
 }
 
 .docs-code code {

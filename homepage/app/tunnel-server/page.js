@@ -22,8 +22,12 @@ echo "deb [signed-by=/usr/share/keyrings/tunneler-archive-keyring.gpg] https://r
 sudo apt update`;
 
 const installCommand = `sudo apt install tunneler-server`;
-const healthCommand = `curl -fsS "http://<DOMAIN>/_health?token=<CLIENT_TOKEN>" | jq .`;
-const healthCommandKo = `curl -fsS "http://<도메인>/_health?token=<CLIENT_TOKEN>" | jq .`;
+const healthCommand = `curl -fsS \\
+  -H "Authorization: Bearer <CLIENT_TOKEN>" \\
+  "http://<DOMAIN>/_health" | jq .`;
+const healthCommandKo = `curl -fsS \\
+  -H "Authorization: Bearer <CLIENT_TOKEN>" \\
+  "http://<도메인>/_health" | jq .`;
 
 export const metadata = {
   title: "PeerSend Tunnel Server Guide",

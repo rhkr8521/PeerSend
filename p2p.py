@@ -5,7 +5,7 @@ rhkr8521 P2P File Transfer (LAN + Tunnel UI Toggle) v17.2
 
 변경점:
 - 터널 피어 조회를 /api/tunnels + BasicAuth 방식에서
-  /_health?token=... GET 방식으로 변경
+  /_health + Authorization: Bearer 헤더 방식으로 변경
 - 터널 설정 UI에서 ADMIN_USER / ADMIN_PASS 제거
 - TOKEN 입력창을 비밀번호처럼 마스킹(show="*")
 - 터널 서버 등록 포트 이름을 "file" -> "file-tunnel" 로 변경
@@ -22,7 +22,7 @@ rhkr8521 P2P File Transfer (LAN + Tunnel UI Toggle) v17.2
   PEER_POLL_INTERVAL   3.0
 
 주의:
-- 피어 목록은 /_health?token=... 응답의 tunnels 기준으로 표시합니다.
+- 피어 목록은 /_health (Authorization: Bearer) 응답의 tunnels 기준으로 표시합니다.
 - 파일 전송 대상으로 보이려면 각 터널의 tcp 정보에 "file-tunnel" 포트가 있어야 합니다.
 - 터널 데이터 릴레이는 서버가 열어준 "file-tunnel 포트"로 TCP 접속합니다.
 """
@@ -67,7 +67,7 @@ IP_FILTER = ("lo", "docker", "veth", "br-", "vm", "tap", "virbr", "wg")
 # =========================
 # Tunnel 설정 (env)
 # =========================
-TUNNEL_HOST = os.getenv("TUNNEL_HOST", "rhkr8521-tunnel.kro.kr")  # 단일 host:port
+TUNNEL_HOST = os.getenv("TUNNEL_HOST", "tunneler-peersend.kro.kr")  # 단일 host:port
 TUNNEL_SSL = os.getenv("TUNNEL_SSL", "1").strip() in ("1", "true", "True", "yes", "Y", "y")
 TUNNEL_TOKEN = os.getenv("TUNNEL_TOKEN", "public-p2p-token-8521")
 TUNNEL_SUB_PREFIX = os.getenv("TUNNEL_SUB_PREFIX", "ft")
@@ -149,7 +149,7 @@ TEXTS = {
         "speed_eta": "속도: 0 MB/s | 남은 시간: --:--",
         "cancel_transfer": "❌ 전송 중단",
         "applied_title": "적용",
-        "applied_message": "적용 완료:\nWS={ws}\nHEALTH={health}/_health?token=***",
+        "applied_message": "적용 완료:\nWS={ws}\nHEALTH={health}/_health",
         "status_ws_connected": "WS 연결됨(등록 중...)",
         "status_registered_port": "등록 완료 ✅ (내 {name} 포트: {port})",
         "status_registered_missing_port": "등록 완료 ✅ ({name} 포트 없음?)",
@@ -240,7 +240,7 @@ TEXTS = {
         "speed_eta": "Speed: 0 MB/s | Time left: --:--",
         "cancel_transfer": "❌ Cancel Transfer",
         "applied_title": "Applied",
-        "applied_message": "Applied:\nWS={ws}\nHEALTH={health}/_health?token=***",
+        "applied_message": "Applied:\nWS={ws}\nHEALTH={health}/_health",
         "status_ws_connected": "WS connected (registering...)",
         "status_registered_port": "Registered ✅ (my {name} port: {port})",
         "status_registered_missing_port": "Registered ✅ ({name} port missing?)",
@@ -622,12 +622,11 @@ class TunnelBridgeClient:
 # =========================
 def fetch_tunnel_peers(admin_base: str, token: str):
     import urllib.request
-    import urllib.parse
 
-    qs = urllib.parse.urlencode({"token": token})
-    url = admin_base.rstrip("/") + f"/_health?{qs}"
+    url = admin_base.rstrip("/") + "/_health"
 
     req = urllib.request.Request(url, method="GET")
+    req.add_header("Authorization", f"Bearer {token}")
 
     with urllib.request.urlopen(req, timeout=8) as resp:
         data = json.loads(resp.read().decode("utf-8", errors="replace"))

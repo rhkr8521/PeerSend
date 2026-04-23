@@ -1,7 +1,8 @@
 export async function GET() {
   const t0 = Date.now();
   try {
-    const res = await fetch("https://tunnel-peersend.kro.kr/health", {
+    const res = await fetch("https://tunneler-peersend.kro.kr/_health", {
+      headers: { Authorization: "Bearer public-p2p-token-8521" },
       signal: AbortSignal.timeout(6000),
       cache: "no-store",
     });

@@ -333,45 +333,80 @@ function MobileExperienceBand({ band }) {
 
 function TunnelStatusButton({ locale }) {
   const [open, setOpen] = useState(false);
-  const [status, setStatus] = useState("checking");
+  const [currentStatus, setCurrentStatus] = useState("checking");
+  const [weekly, setWeekly] = useState([]);
   const [latency, setLatency] = useState(null);
   const [lastChecked, setLastChecked] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  const check = useCallback(async () => {
+  const applyJson = useCallback((json) => {
+    setCurrentStatus(json.currentStatus === "unknown" ? "checking" : json.currentStatus);
+    setWeekly(json.weekly ?? []);
+    setLatency(json.latency ?? null);
+    setLastChecked(json.lastChecked ? new Date(json.lastChecked) : null);
+  }, []);
+
+  const load = useCallback(async () => {
     setLoading(true);
-    setStatus("checking");
     try {
-      const res = await fetch("/api/tunnel-status");
-      const json = await res.json();
-      setStatus(json.status);
-      setLatency(json.latency ?? null);
-      setLastChecked(new Date());
+      const res = await fetch("/api/tunnel-health");
+      applyJson(await res.json());
     } catch {
-      setStatus("offline");
-      setLatency(null);
-      setLastChecked(new Date());
+      setCurrentStatus("offline");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [applyJson]);
 
-  useEffect(() => {
-    check();
-  }, [check]);
+  const refresh = useCallback(async () => {
+    setLoading(true);
+    setCurrentStatus("checking");
+    try {
+      await fetch("/api/tunnel-health", { method: "POST" });
+      const res = await fetch("/api/tunnel-health");
+      applyJson(await res.json());
+    } catch {
+      setCurrentStatus("offline");
+    } finally {
+      setLoading(false);
+    }
+  }, [applyJson]);
 
+  useEffect(() => { load(); }, [load]);
+
+  const dotStatus = currentStatus === "unknown" ? "checking" : currentStatus;
   const label = locale === "ko" ? "공개 터널 상태" : "Tunnel Status";
-  const statusLabel = { checking: locale === "ko" ? "확인 중" : "Checking", online: locale === "ko" ? "온라인" : "Online", offline: locale === "ko" ? "오프라인" : "Offline" }[status];
+  const STATUS_LABELS = {
+    checking: locale === "ko" ? "확인 중" : "Checking",
+    online:   locale === "ko" ? "온라인"  : "Online",
+    offline:  locale === "ko" ? "오프라인" : "Offline",
+    unknown:  locale === "ko" ? "확인 중" : "Checking",
+  };
+
+  const todayStatus = weekly.length > 0 ? weekly[weekly.length - 1].status : null;
+  const showUnstable = todayStatus === "yellow" && currentStatus !== "offline";
 
   const formatTime = (date) => {
     if (!date) return "-";
-    return date.toLocaleTimeString(locale === "ko" ? "ko-KR" : "en-US", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+    return date.toLocaleTimeString(locale === "ko" ? "ko-KR" : "en-US", {
+      hour: "2-digit", minute: "2-digit", second: "2-digit",
+    });
+  };
+
+  const weekDotTitle = (item) => {
+    if (!item) return "";
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const d = new Date(item.date);
+    const diff = Math.round((today.getTime() - d.getTime()) / 86400000);
+    if (diff === 0) return locale === "ko" ? "오늘" : "Today";
+    return locale === "ko" ? `${diff}일 전` : `${diff}d ago`;
   };
 
   return (
     <div className="tunnel-status-wrap">
       <button type="button" className="tunnel-status-btn" onClick={() => setOpen((prev) => !prev)} aria-expanded={open}>
-        <span className={`tunnel-dot dot-${status}`} />
+        <span className={`tunnel-dot dot-${dotStatus}`} />
         {label}
       </button>
       {open && (
@@ -382,27 +417,55 @@ function TunnelStatusButton({ locale }) {
               <strong>{locale === "ko" ? "터널 서버 상태" : "Tunnel Server"}</strong>
               <button type="button" className="tunnel-close-btn" onClick={() => setOpen(false)}>✕</button>
             </div>
+
             <div className="tunnel-row">
               <span className="tunnel-row-label">{locale === "ko" ? "상태" : "Status"}</span>
-              <span className={`tunnel-row-value tunnel-row-status status-${status}`}>
-                <span className={`tunnel-dot dot-${status}`} />
-                {statusLabel}
+              <span className={`tunnel-row-value tunnel-row-status status-${currentStatus}`}>
+                <span className={`tunnel-dot dot-${dotStatus}`} />
+                {STATUS_LABELS[currentStatus] ?? "-"}
               </span>
             </div>
+
+            {showUnstable && (
+              <p className="tunnel-unstable-msg">
+                {locale === "ko" ? "서버가 조금 불안정합니다." : "Server is slightly unstable."}
+              </p>
+            )}
+
+            <div className="tunnel-row">
+              <span className="tunnel-row-label">{locale === "ko" ? "마지막 확인" : "Last checked"}</span>
+              <span className="tunnel-row-value">{formatTime(lastChecked)}</span>
+            </div>
+
             {latency !== null && (
               <div className="tunnel-row">
                 <span className="tunnel-row-label">{locale === "ko" ? "응답 속도" : "Latency"}</span>
                 <span className="tunnel-row-value">{latency}ms</span>
               </div>
             )}
-            <div className="tunnel-row">
-              <span className="tunnel-row-label">{locale === "ko" ? "마지막 확인" : "Last checked"}</span>
-              <span className="tunnel-row-value">{formatTime(lastChecked)}</span>
-            </div>
-            <button type="button" className="tunnel-refresh-btn" onClick={check} disabled={loading}>
-              {loading ? (locale === "ko" ? "확인 중..." : "Checking...") : (locale === "ko" ? "새로고침" : "Refresh")}
+
+            {weekly.length > 0 && (
+              <div className="tunnel-weekly">
+                <span className="tunnel-weekly-label">{locale === "ko" ? "최근 7일" : "Last 7 days"}</span>
+                <div className="tunnel-weekly-bars">
+                  {weekly.map((item) => (
+                    <span
+                      key={item.date}
+                      className={`tunnel-week-bar wbar-${item.status}`}
+                      title={weekDotTitle(item)}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <button type="button" className="tunnel-refresh-btn" onClick={refresh} disabled={loading}>
+              {loading
+                ? (locale === "ko" ? "확인 중..." : "Checking...")
+                : (locale === "ko" ? "새로고침" : "Refresh")}
             </button>
-            {status === "offline" && (
+
+            {currentStatus === "offline" && (
               <a className="tunnel-outage-link" href={withLocalePath("/notice", locale)}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                   <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.8" />
