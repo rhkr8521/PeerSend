@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { SiGoogleplay, SiAppstore } from "react-icons/si";
 import { landingContent } from "./content";
 import { detectLocaleFromNavigator, withLocalePath } from "./locale";
 import SiteFooter from "./components/SiteFooter";
@@ -212,23 +213,11 @@ function RemoteScene() {
 
 function StoreIcon({ type }) {
   if (type === "play") {
-    return (
-      <svg className="store-icon" viewBox="0 0 24 24" aria-hidden="true">
-        <path d="M3.8 3.1c-.3.3-.4.8-.4 1.5v14.8c0 .7.2 1.2.5 1.5l.1.1L13.3 12 4 3z" fill="#00D3FF" />
-        <path d="M13.3 12 17 8.3l-4.7-2.7L4 3l9.3 9Z" fill="#46F081" />
-        <path d="m13.3 12-9.2 9 .1.1c.3.2.8.2 1.4-.1l10.9-6.2L13.3 12Z" fill="#FFD84A" />
-        <path d="m20.1 10.4-3.1-1.8-3.6 3.4 3.7 3.6 3-1.7c.9-.5.9-1.3.9-1.9 0-.6 0-1.2-.9-1.6Z" fill="#FF6B5E" />
-      </svg>
-    );
+    return <SiGoogleplay className="store-icon" color="#34A853" aria-hidden="true" />;
   }
 
   if (type === "apple") {
-    return (
-      <svg className="store-icon" viewBox="0 0 24 24" aria-hidden="true">
-        <rect x="2.5" y="2.5" width="19" height="19" rx="5" fill="#0A84FF" />
-        <path d="M9.4 8.2h1.6l4.2 7.6h-1.6L9.4 8.2Zm3.6 0h1.6L10.4 16H8.8L13 8.2Zm-5.7 6.1h9.4v1.5H7.3v-1.5Z" fill="#fff" />
-      </svg>
-    );
+    return <SiAppstore className="store-icon" color="#0D96F6" aria-hidden="true" />;
   }
 
   if (type === "pc") {
@@ -262,10 +251,10 @@ function PlatformIcon({ label }) {
       )}
       {label === "Tunnel" && (
         <svg className="platform-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-          <path d="M4 12a8 8 0 0116 0" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
-          <circle cx="4" cy="12" r="2.2" fill="currentColor" />
-          <circle cx="20" cy="12" r="2.2" fill="currentColor" />
-          <circle cx="12" cy="4" r="1.4" fill="currentColor" opacity="0.55" />
+          <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.7" />
+          <ellipse cx="12" cy="12" rx="4.2" ry="9" stroke="currentColor" strokeWidth="1.5" />
+          <path d="M3 12h18" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+          <path d="M4.5 7.5h15M4.5 16.5h15" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" opacity="0.5" />
         </svg>
       )}
       {label === "Control" && (
@@ -330,18 +319,13 @@ function ExperienceBand({ band, sceneIndex, locale }) {
   return null;
 }
 
-function MobileExperienceBand({ band, sceneIndex, locale }) {
+function MobileExperienceBand({ band }) {
   return (
     <article className={`mobile-experience-card ${band.tone}`} data-reveal>
       <div className="mobile-experience-copy">
         <p className="band-kicker">{band.kicker}</p>
         <h3>{band.title}</h3>
         <p>{band.body}</p>
-      </div>
-      <div className="mobile-experience-visual">
-        {band.id === "direct" && <TransferScene sceneIndex={sceneIndex} locale={locale} />}
-        {band.id === "flexible" && <FlexibleScene />}
-        {band.id === "tunnel" && <RemoteScene />}
       </div>
     </article>
   );
@@ -536,14 +520,22 @@ export default function LandingClient({ initialLocale = "en" }) {
         <section className="mobile-hero mobile-only">
           <div className="mobile-hero-copy" data-reveal>
             <p className="section-tag">{content.hero.tag}</p>
-            <h1>{content.hero.mobileTitle}</h1>
-            <p>{content.hero.mobileDescription}</p>
+            <h1 className="mobile-hero-h1">{content.hero.mobileTitle}</h1>
+            <p className="mobile-hero-desc">{content.hero.mobileDescription}</p>
+            <div className="mobile-hero-chips">
+              <span className="mobile-status-chip chip-lan">
+                <span className="status-dot" />
+                LAN
+              </span>
+              <span className="mobile-status-sep" />
+              <span className="mobile-status-chip chip-tunnel">
+                <span className="status-dot" />
+                Tunnel
+              </span>
+            </div>
             <a className="action-primary mobile-hero-action" href="#download">
               {content.hero.start}
             </a>
-          </div>
-          <div className="mobile-hero-stage" data-reveal>
-            <TransferScene sceneIndex={sceneIndex} locale={locale} />
           </div>
         </section>
       </section>
@@ -553,7 +545,6 @@ export default function LandingClient({ initialLocale = "en" }) {
           <article className="platform-card" data-reveal key={card.label}>
             <div className="platform-card-header">
               <PlatformIcon label={card.label} />
-              <span className="platform-label">{card.label}</span>
             </div>
             <h3>{card.title}</h3>
             <p>{card.body}</p>
@@ -562,16 +553,15 @@ export default function LandingClient({ initialLocale = "en" }) {
         ))}
       </section>
 
-      <section className="mobile-platform-list mobile-only">
+      <section className="mobile-platform-list mobile-only" data-reveal>
         {platformCards.map((card) => (
-          <article className="mobile-platform-card" data-reveal key={card.label}>
-            <div className="platform-card-header">
-              <PlatformIcon label={card.label} />
-              <span className="platform-label">{card.label}</span>
+          <article className="mobile-platform-row" key={card.label}>
+            <PlatformIcon label={card.label} />
+            <div className="mobile-platform-row-body">
+              <strong>{card.title}</strong>
+              <p>{card.body}</p>
+              {card.note ? <small className="platform-note">{card.note}</small> : null}
             </div>
-            <h3>{card.title}</h3>
-            <p>{card.body}</p>
-            {card.note ? <small className="platform-note">{card.note}</small> : null}
           </article>
         ))}
       </section>
@@ -659,20 +649,27 @@ export default function LandingClient({ initialLocale = "en" }) {
         </section>
 
         <section className="mobile-download-section mobile-only" data-reveal>
-          <div className="download-copy">
+          <div className="mobile-dl-header">
             <p className="section-tag">{content.downloads.tag}</p>
             <h2>{content.downloads.mobileTitle}</h2>
             <p>{content.downloads.mobileBody}</p>
           </div>
           <div className="mobile-download-list">
             {downloads.map((item) => (
-              <a className="download-tile mobile-download-tile" href={item.href} key={item.platform}>
-                <span>{item.platform}</span>
-                <strong>{item.detail}</strong>
-                <em>
-                  {item.store ? <StoreIcon type={item.store} /> : item.platform === "PC" ? <StoreIcon type="pc" /> : null}
+              <a className="mobile-dl-tile" href={item.href} key={item.platform}>
+                <span className="mobile-dl-icon">
+                  <StoreIcon type={item.store || "pc"} />
+                </span>
+                <span className="mobile-dl-info">
+                  <strong>{item.platform}</strong>
+                  <span>{item.detail}</span>
+                </span>
+                <span className="mobile-dl-cta">
                   {item.platform === "PC" ? content.downloads.ctaOpen : content.downloads.ctaDownload}
-                </em>
+                  <svg className="mobile-dl-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </span>
               </a>
             ))}
           </div>
