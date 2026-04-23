@@ -52,7 +52,7 @@ from tkinter import ttk, messagebox, filedialog
 try:
     from engine.version import ENGINE_VERSION as APP_VERSION
 except Exception:
-    APP_VERSION = "1.2.2"
+    APP_VERSION = "1.3.2"
 
 
 # =========================

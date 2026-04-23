@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 const LOCAL_ORIGIN = import.meta.env.VITE_PEERSEND_LOCAL_ORIGIN || "http://127.0.0.1:8765";
 const CUSTOM_PROTOCOL = import.meta.env.VITE_PEERSEND_PROTOCOL || "peersend://launch";
-const REQUIRED_ENGINE_VERSION = import.meta.env.VITE_PEERSEND_REQUIRED_ENGINE_VERSION || "1.2.2";
+const REQUIRED_ENGINE_VERSION = import.meta.env.VITE_PEERSEND_REQUIRED_ENGINE_VERSION || "1.3.2";
 const DOWNLOAD_URLS = {
   windows:
     import.meta.env.VITE_PEERSEND_WINDOWS_DOWNLOAD_URL ||
