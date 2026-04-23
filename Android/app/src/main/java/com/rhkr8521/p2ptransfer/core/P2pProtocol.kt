@@ -23,7 +23,7 @@ const val LOCAL_FILE_PORT = 50_000
 const val POLL_INTERVAL_MS = 3_000L
 const val DEVICE_TIMEOUT_MS = 20_000L
 
-const val DEFAULT_TUNNEL_HOST = "rhkr8521-tunnel.kro.kr"
+const val DEFAULT_TUNNEL_HOST = "tunneler-peersend.kro.kr"
 const val DEFAULT_TUNNEL_TOKEN = "public-p2p-token-8521"
 const val DEFAULT_TUNNEL_SUB_PREFIX = "ft"
 const val TUNNEL_TCP_NAME = "file_tunnel"

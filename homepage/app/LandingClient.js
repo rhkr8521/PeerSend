@@ -96,9 +96,12 @@ function TransferScene({ sceneIndex, locale }) {
       <TransferDevice device={scene.left} locale={locale} />
       <div className="transfer-rail">
         <div className="transfer-line" />
-        <div className="transfer-file">
-          <span className="transfer-file-fold" />
+        <div className="transfer-beam" />
+        <div className="transfer-packet">
+          <span className="transfer-packet-fold" />
         </div>
+        <span className="ts-spark ts-spark-a" />
+        <span className="ts-spark ts-spark-b" />
       </div>
       <TransferDevice device={scene.right} locale={locale} />
     </div>
@@ -118,8 +121,8 @@ function FlexibleScene() {
                 <strong>Original file</strong>
               </div>
               <div className="flexible-meter">
-                <span />
-                <span />
+                <span className="flexible-meter-bar" />
+                <span className="flexible-meter-bar" />
               </div>
             </div>
             <div className="desktop-stand" />
@@ -128,9 +131,13 @@ function FlexibleScene() {
         </div>
 
         <div className="flexible-flow-lane">
-          <div className="flexible-lane-line" />
+          <div className="flexible-lane-line flexible-lane-upper" />
+          <div className="flexible-lane-line flexible-lane-lower" />
           <span className="lane-chip lane-chip-primary">FILE</span>
           <span className="lane-chip lane-chip-secondary">ZIP</span>
+          <span className="lane-relay lane-relay-a" />
+          <span className="lane-relay lane-relay-b" />
+          <span className="lane-relay lane-relay-c" />
           <span className="lane-glow lane-glow-a" />
           <span className="lane-glow lane-glow-b" />
         </div>
@@ -141,9 +148,9 @@ function FlexibleScene() {
             <div className="handset-screen flexible-screen">
               <span className="transfer-device-label">Phone</span>
               <div className="flexible-stack">
-                <span className="flexible-stack-item">IMG_2048</span>
-                <span className="flexible-stack-item">DOC_share</span>
-                <span className="flexible-stack-item">ZIP bundle</span>
+                <span className="flexible-stack-item flex-recv-1">IMG_2048</span>
+                <span className="flexible-stack-item flex-recv-2">DOC_share</span>
+                <span className="flexible-stack-item flex-recv-3">ZIP bundle</span>
               </div>
             </div>
           </div>
@@ -175,6 +182,11 @@ function RemoteScene() {
       <div className="remote-bridge">
         <div className="remote-bridge-arc" />
         <div className="remote-bridge-arc remote-bridge-arc-soft" />
+        <div className="remote-relay">
+          <span className="remote-relay-ring remote-relay-ring-a" />
+          <span className="remote-relay-ring remote-relay-ring-b" />
+          <span className="remote-relay-core" />
+        </div>
         <span className="remote-bridge-label">TUNNEL</span>
         <span className="remote-packet remote-packet-a">FILE</span>
         <span className="remote-packet remote-packet-b">ZIP</span>
@@ -219,7 +231,51 @@ function StoreIcon({ type }) {
     );
   }
 
+  if (type === "pc") {
+    return (
+      <svg className="store-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <rect x="2" y="3" width="20" height="13" rx="2" stroke="currentColor" strokeWidth="1.8" />
+        <path d="M8 21h8M12 16v5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+      </svg>
+    );
+  }
+
   return null;
+}
+
+function PlatformIcon({ label }) {
+  const palettes = {
+    LAN: { bg: "rgba(97, 230, 213, 0.13)", color: "var(--teal)" },
+    Tunnel: { bg: "rgba(127, 179, 255, 0.13)", color: "var(--sky)" },
+    Control: { bg: "rgba(255, 135, 96, 0.13)", color: "var(--coral)" },
+  };
+  const { bg, color } = palettes[label] || { bg: "rgba(255,255,255,0.07)", color: "var(--text)" };
+
+  return (
+    <span className="platform-icon-wrap" style={{ background: bg, color }}>
+      {label === "LAN" && (
+        <svg className="platform-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <circle cx="12" cy="17.5" r="1.5" fill="currentColor" />
+          <path d="M8.2 13.8a5.5 5.5 0 017.6 0" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+          <path d="M4.5 10.1a10 10 0 0115 0" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+        </svg>
+      )}
+      {label === "Tunnel" && (
+        <svg className="platform-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M4 12a8 8 0 0116 0" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+          <circle cx="4" cy="12" r="2.2" fill="currentColor" />
+          <circle cx="20" cy="12" r="2.2" fill="currentColor" />
+          <circle cx="12" cy="4" r="1.4" fill="currentColor" opacity="0.55" />
+        </svg>
+      )}
+      {label === "Control" && (
+        <svg className="platform-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M12 2L4 6v6c0 4.4 3.4 8.5 8 9.5 4.6-1 8-5.1 8-9.5V6l-8-4z" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
+          <path d="M9 12l2 2 4-4" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      )}
+    </span>
+  );
 }
 
 function ExperienceBand({ band, sceneIndex, locale }) {
@@ -275,8 +331,6 @@ function ExperienceBand({ band, sceneIndex, locale }) {
 }
 
 function MobileExperienceBand({ band, sceneIndex, locale }) {
-  const showVisual = band.id === "direct";
-
   return (
     <article className={`mobile-experience-card ${band.tone}`} data-reveal>
       <div className="mobile-experience-copy">
@@ -284,11 +338,11 @@ function MobileExperienceBand({ band, sceneIndex, locale }) {
         <h3>{band.title}</h3>
         <p>{band.body}</p>
       </div>
-      {showVisual ? (
-        <div className="mobile-experience-visual">
-          <TransferScene sceneIndex={sceneIndex} locale={locale} />
-        </div>
-      ) : null}
+      <div className="mobile-experience-visual">
+        {band.id === "direct" && <TransferScene sceneIndex={sceneIndex} locale={locale} />}
+        {band.id === "flexible" && <FlexibleScene />}
+        {band.id === "tunnel" && <RemoteScene />}
+      </div>
     </article>
   );
 }
@@ -497,7 +551,10 @@ export default function LandingClient({ initialLocale = "en" }) {
       <section className="platform-grid desktop-only">
         {platformCards.map((card) => (
           <article className="platform-card" data-reveal key={card.label}>
-            <span className="platform-label">{card.label}</span>
+            <div className="platform-card-header">
+              <PlatformIcon label={card.label} />
+              <span className="platform-label">{card.label}</span>
+            </div>
             <h3>{card.title}</h3>
             <p>{card.body}</p>
             {card.note ? <small className="platform-note">{card.note}</small> : null}
@@ -508,7 +565,10 @@ export default function LandingClient({ initialLocale = "en" }) {
       <section className="mobile-platform-list mobile-only">
         {platformCards.map((card) => (
           <article className="mobile-platform-card" data-reveal key={card.label}>
-            <span className="platform-label">{card.label}</span>
+            <div className="platform-card-header">
+              <PlatformIcon label={card.label} />
+              <span className="platform-label">{card.label}</span>
+            </div>
             <h3>{card.title}</h3>
             <p>{card.body}</p>
             {card.note ? <small className="platform-note">{card.note}</small> : null}
@@ -519,6 +579,28 @@ export default function LandingClient({ initialLocale = "en" }) {
       <section className="marquee-band" data-reveal>
         <div className="marquee-track">
           <div className="marquee-group">
+            <span>Windows</span>
+            <span>macOS</span>
+            <span>Linux</span>
+            <span>Android</span>
+            <span>iPhone</span>
+            <span>iPad</span>
+            <span>LAN</span>
+            <span>Tunnel</span>
+            <span>PeerSend</span>
+          </div>
+          <div className="marquee-group" aria-hidden="true">
+            <span>Windows</span>
+            <span>macOS</span>
+            <span>Linux</span>
+            <span>Android</span>
+            <span>iPhone</span>
+            <span>iPad</span>
+            <span>LAN</span>
+            <span>Tunnel</span>
+            <span>PeerSend</span>
+          </div>
+          <div className="marquee-group" aria-hidden="true">
             <span>Windows</span>
             <span>macOS</span>
             <span>Linux</span>
@@ -568,7 +650,7 @@ export default function LandingClient({ initialLocale = "en" }) {
                 <span>{item.platform}</span>
                 <strong>{item.detail}</strong>
                 <em>
-                  {item.store ? <StoreIcon type={item.store} /> : null}
+                  {item.store ? <StoreIcon type={item.store} /> : item.platform === "PC" ? <StoreIcon type="pc" /> : null}
                   {item.platform === "PC" ? content.downloads.ctaOpen : content.downloads.ctaDownload}
                 </em>
               </a>
@@ -588,7 +670,7 @@ export default function LandingClient({ initialLocale = "en" }) {
                 <span>{item.platform}</span>
                 <strong>{item.detail}</strong>
                 <em>
-                  {item.store ? <StoreIcon type={item.store} /> : null}
+                  {item.store ? <StoreIcon type={item.store} /> : item.platform === "PC" ? <StoreIcon type="pc" /> : null}
                   {item.platform === "PC" ? content.downloads.ctaOpen : content.downloads.ctaDownload}
                 </em>
               </a>

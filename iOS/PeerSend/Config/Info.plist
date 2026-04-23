@@ -26,6 +26,8 @@
 	<true/>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>PeerSend uses your local network to discover nearby devices and transfer files.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>PeerSend needs permission to save received images and videos to your Photos library.</string>
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSAllowsArbitraryLoads</key>

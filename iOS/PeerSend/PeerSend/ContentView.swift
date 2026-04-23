@@ -2,6 +2,7 @@ import SwiftUI
 import UniformTypeIdentifiers
 import PhotosUI
 import UIKit
+import AVFoundation
 
 struct ContentView: View {
     private enum PendingSendSourceAction {
@@ -12,7 +13,7 @@ struct ContentView: View {
     @StateObject private var viewModel = PeerSendViewModel()
     @Environment(\.scenePhase) private var scenePhase
 
-    @State private var showHelp = false
+    @State private var selectedTab = 0
     @State private var showSendSourceDialog = false
     @State private var showDocumentPicker = false
     @State private var showFolderImporter = false
@@ -31,7 +32,22 @@ struct ContentView: View {
 
     var body: some View {
         ZStack {
-            mainScrollContent
+            TabView(selection: $selectedTab) {
+                transferTab
+                    .tabItem { Label(L10n.tabTransfer, systemImage: "paperplane.fill") }
+                    .tag(0)
+                galleryTab
+                    .tabItem { Label(L10n.tabGallery, systemImage: "photo.on.rectangle") }
+                    .tag(1)
+                helpTab
+                    .tabItem { Label(L10n.tabHelp, systemImage: "questionmark.circle") }
+                    .tag(2)
+                appInfoTab
+                    .tabItem { Label(L10n.tabAppInfo, systemImage: "info.circle") }
+                    .tag(3)
+            }
+            .tint(Color.appAccent)
+
             overlayContent
         }
         .fileImporter(
@@ -59,12 +75,8 @@ struct ContentView: View {
             onDismiss: handlePendingSendSourceAction
         ) {
             SendSourceSheet(
-                onChooseFiles: {
-                    completeSendSourceSelection(.files)
-                },
-                onChoosePhotos: {
-                    completeSendSourceSelection(.photos)
-                }
+                onChooseFiles: { completeSendSourceSelection(.files) },
+                onChoosePhotos: { completeSendSourceSelection(.photos) }
             )
             .presentationDetents([.height(220)])
             .presentationDragIndicator(.visible)
@@ -73,9 +85,7 @@ struct ContentView: View {
             isPresented: Binding(
                 get: { !usesPadModalDialogs && !pendingPickedURLs.isEmpty },
                 set: { isPresented in
-                    if !isPresented {
-                        pendingPickedURLs = []
-                    }
+                    if !isPresented { pendingPickedURLs = [] }
                 }
             )
         ) {
@@ -136,6 +146,17 @@ struct ContentView: View {
         .onChange(of: scenePhase) { newValue in
             viewModel.handleScenePhase(newValue)
         }
+        .onChange(of: selectedTab) { tab in
+            if tab == 1 { viewModel.refreshReceivedFiles() }
+        }
+    }
+
+    // MARK: - Transfer Tab
+
+    private var transferTab: some View {
+        ZStack {
+            mainScrollContent
+        }
     }
 
     private var mainScrollContent: some View {
@@ -148,8 +169,7 @@ struct ContentView: View {
                     myIP: viewModel.myIP,
                     tunnelStatus: viewModel.tunnelStatus,
                     onToggleMode: viewModel.requestToggleMode,
-                    onRefresh: viewModel.manualRefresh,
-                    onShowHelp: { showHelp = true }
+                    onRefresh: viewModel.manualRefresh
                 )
 
                 ActionSection(
@@ -173,6 +193,7 @@ struct ContentView: View {
                 }
             }
             .padding(16)
+            .padding(.bottom, 8)
         }
         .background(
             LinearGradient(
@@ -202,12 +223,32 @@ struct ContentView: View {
         }
     }
 
+    // MARK: - Gallery Tab
+
+    private var galleryTab: some View {
+        GalleryTabView(viewModel: viewModel)
+    }
+
+    // MARK: - Help Tab
+
+    private var helpTab: some View {
+        HelpTabView()
+    }
+
+    // MARK: - App Info Tab
+
+    private var appInfoTab: some View {
+        AppInfoTabView()
+    }
+
+    // MARK: - Overlays
+
     @ViewBuilder
     private var overlayContent: some View {
         if let message = viewModel.eventMessage {
             ToastView(message: message)
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
-                .padding(.bottom, 28)
+                .padding(.bottom, 72)
                 .transition(.move(edge: .bottom).combined(with: .opacity))
         }
 
@@ -247,12 +288,6 @@ struct ContentView: View {
                     onReceive: { viewModel.respondToPendingRequest(accept: true) },
                     onReject: { viewModel.respondToPendingRequest(accept: false) }
                 )
-            }
-        }
-
-        if showHelp {
-            ModalBackdrop {
-                HelpDialog(onClose: { showHelp = false })
             }
         }
 
@@ -311,10 +346,8 @@ struct ContentView: View {
         guard let action = pendingSendSourceAction else { return }
         pendingSendSourceAction = nil
         switch action {
-        case .files:
-            presentFilesPicker()
-        case .photos:
-            presentPhotoPicker()
+        case .files: presentFilesPicker()
+        case .photos: presentPhotoPicker()
         }
     }
 
@@ -326,6 +359,422 @@ struct ContentView: View {
         }
     }
 }
+
+// MARK: - Gallery Tab View
+
+private struct GalleryTabView: View {
+    @ObservedObject var viewModel: PeerSendViewModel
+    @State private var selectedItems: Set<URL> = []
+    @State private var selectionMode = false
+    @State private var isSaving = false
+
+    private let columns = [
+        GridItem(.flexible()),
+        GridItem(.flexible()),
+        GridItem(.flexible()),
+    ]
+
+    var body: some View {
+        ZStack(alignment: .bottom) {
+            Color.appBackgroundTop.ignoresSafeArea()
+
+            VStack(spacing: 0) {
+                headerBar
+
+                if viewModel.receivedFiles.isEmpty {
+                    emptyState
+                } else {
+                    galleryGrid
+                }
+            }
+
+            if selectionMode && !selectedItems.isEmpty {
+                saveToPhotosBar
+            }
+        }
+    }
+
+    private var headerBar: some View {
+        HStack(spacing: 12) {
+            Text(L10n.tabGallery)
+                .font(.title3.bold())
+                .foregroundStyle(Color.appPrimaryText)
+            Spacer()
+            if selectionMode {
+                Button(selectedItems.count == viewModel.receivedFiles.count
+                       ? L10n.galleryClearSelection
+                       : L10n.gallerySelectAll) {
+                    if selectedItems.count == viewModel.receivedFiles.count {
+                        selectedItems.removeAll()
+                        selectionMode = false
+                    } else {
+                        selectedItems = Set(viewModel.receivedFiles.map(\.url))
+                    }
+                }
+                .foregroundStyle(Color.appAccent)
+                .font(.subheadline)
+            }
+            Button(selectionMode ? L10n.cancel : L10n.gallerySelectAll) {
+                selectionMode.toggle()
+                if !selectionMode { selectedItems.removeAll() }
+            }
+            .foregroundStyle(Color.appAccent)
+            .font(.subheadline.weight(.medium))
+        }
+        .padding(.horizontal, 16)
+        .padding(.top, 8)
+        .padding(.bottom, 10)
+    }
+
+    private var emptyState: some View {
+        VStack(spacing: 16) {
+            Image(systemName: "photo.on.rectangle.angled")
+                .font(.system(size: 56))
+                .foregroundStyle(Color.appSecondaryText)
+            Text(L10n.galleryEmpty)
+                .font(.body)
+                .foregroundStyle(Color.appSecondaryText)
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding(40)
+    }
+
+    private var galleryGrid: some View {
+        ScrollView {
+            LazyVGrid(columns: columns, spacing: 2) {
+                ForEach(viewModel.receivedFiles) { item in
+                    Color.clear
+                        .aspectRatio(1, contentMode: .fit)
+                        .overlay {
+                            GalleryTile(
+                                item: item,
+                                isSelected: selectedItems.contains(item.url),
+                                selectionMode: selectionMode
+                            )
+                        }
+                        .clipped()
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            if selectionMode {
+                                if selectedItems.contains(item.url) {
+                                    selectedItems.remove(item.url)
+                                    if selectedItems.isEmpty { selectionMode = false }
+                                } else {
+                                    selectedItems.insert(item.url)
+                                }
+                            } else {
+                                selectionMode = true
+                                selectedItems.insert(item.url)
+                            }
+                        }
+                }
+            }
+            .padding(.bottom, selectionMode && !selectedItems.isEmpty ? 80 : 2)
+        }
+        .overlay(alignment: .top) {
+            LinearGradient(
+                colors: [Color.appBackgroundTop, Color.appBackgroundTop.opacity(0)],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .frame(height: 16)
+            .allowsHitTesting(false)
+        }
+    }
+
+    private var saveToPhotosBar: some View {
+        VStack(spacing: 0) {
+            Divider()
+            HStack(spacing: 10) {
+                Text(L10n.gallerySelectedCount(selectedItems.count))
+                    .font(.subheadline)
+                    .foregroundStyle(Color.appSecondaryText)
+                Spacer()
+                Button {
+                    deleteSelected()
+                } label: {
+                    Image(systemName: "trash")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.white)
+                        .frame(width: 44, height: 40)
+                        .background(Color.red, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                }
+                .disabled(isSaving)
+                Button {
+                    saveSelected()
+                } label: {
+                    if isSaving {
+                        ProgressView()
+                            .tint(Color.white)
+                            .frame(width: 120, height: 40)
+                            .background(Color.appAccent, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    } else {
+                        Text(L10n.gallerySaveToPhotos)
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(.white)
+                            .frame(width: 120, height: 40)
+                            .background(Color.appAccent, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    }
+                }
+                .disabled(isSaving)
+            }
+            .padding(.horizontal, 20)
+            .padding(.vertical, 12)
+            .background(Color.appCardSurface)
+        }
+    }
+
+    private func saveSelected() {
+        let items = viewModel.receivedFiles.filter { selectedItems.contains($0.url) }
+        guard !items.isEmpty else { return }
+        isSaving = true
+        Task {
+            let result = await viewModel.saveToPhotos(items: items)
+            await MainActor.run {
+                isSaving = false
+                selectionMode = false
+                selectedItems.removeAll()
+                viewModel.emitEvent(result)
+            }
+        }
+    }
+
+    private func deleteSelected() {
+        let items = viewModel.receivedFiles.filter { selectedItems.contains($0.url) }
+        guard !items.isEmpty else { return }
+        let count = items.count
+        selectionMode = false
+        selectedItems.removeAll()
+        viewModel.deleteReceivedFiles(items: items)
+        viewModel.emitEvent(L10n.galleryDeletedCount(count))
+    }
+}
+
+private struct GalleryTile: View {
+    let item: ReceivedFileItem
+    let isSelected: Bool
+    let selectionMode: Bool
+
+    var body: some View {
+        ZStack(alignment: .topTrailing) {
+            ThumbnailView(item: item)
+                .overlay(
+                    isSelected
+                        ? Color.appAccent.opacity(0.28)
+                        : Color.clear
+                )
+
+            if item.isVideo {
+                Image(systemName: "play.circle.fill")
+                    .font(.system(size: 24))
+                    .foregroundStyle(.white)
+                    .shadow(radius: 2)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+
+            if selectionMode {
+                ZStack {
+                    Circle()
+                        .fill(isSelected ? Color.appAccent : Color.black.opacity(0.25))
+                        .frame(width: 22, height: 22)
+                    if isSelected {
+                        Image(systemName: "checkmark")
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundStyle(.white)
+                    } else {
+                        Circle()
+                            .strokeBorder(Color.white.opacity(0.9), lineWidth: 1.5)
+                            .frame(width: 22, height: 22)
+                    }
+                }
+                .shadow(color: Color.black.opacity(0.3), radius: 2)
+                .padding(6)
+            }
+        }
+    }
+}
+
+private struct ThumbnailView: View {
+    let item: ReceivedFileItem
+    @State private var thumbnail: UIImage?
+
+    var body: some View {
+        Group {
+            if let thumbnail {
+                Image(uiImage: thumbnail)
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+            } else {
+                Rectangle()
+                    .fill(Color.appCardSurface)
+                    .overlay(
+                        Image(systemName: item.isVideo ? "video" : "photo")
+                            .font(.system(size: 28))
+                            .foregroundStyle(Color.appSecondaryText)
+                    )
+            }
+        }
+        .task(id: item.url) {
+            thumbnail = await loadThumbnail()
+        }
+    }
+
+    private func loadThumbnail() async -> UIImage? {
+        let url = item.url
+        return await Task.detached(priority: .background) {
+            if item.isVideo {
+                let asset = AVAsset(url: url)
+                let gen = AVAssetImageGenerator(asset: asset)
+                gen.appliesPreferredTrackTransform = true
+                gen.maximumSize = CGSize(width: 300, height: 300)
+                let time = CMTime(seconds: 0, preferredTimescale: 600)
+                return (try? gen.copyCGImage(at: time, actualTime: nil)).map { UIImage(cgImage: $0) }
+            } else {
+                guard let data = try? Data(contentsOf: url) else { return nil }
+                return UIImage(data: data)
+            }
+        }.value
+    }
+}
+
+// MARK: - Help Tab View
+
+private struct HelpTabView: View {
+    private struct HelpSection {
+        let icon: String
+        let title: String
+        let body: String
+    }
+
+    private var sections: [HelpSection] {[
+        HelpSection(icon: "wifi", title: L10n.modeLAN, body: L10n.helpTextLAN),
+        HelpSection(icon: "network", title: L10n.modeTunnel, body: L10n.helpTextTunnel),
+        HelpSection(icon: "arrow.clockwise", title: L10n.refresh, body: L10n.helpTextRefresh),
+        HelpSection(icon: "folder", title: L10n.saveFolder, body: L10n.helpTextSaveFolder),
+        HelpSection(icon: "paperplane", title: L10n.sendFiles, body: L10n.helpTextSendFiles),
+        HelpSection(icon: "photo.on.rectangle.angled", title: L10n.tabGallery, body: L10n.helpTextGallery),
+    ]}
+
+    var body: some View {
+        NavigationView {
+            List {
+                ForEach(sections, id: \.title) { section in
+                    HStack(alignment: .top, spacing: 14) {
+                        Image(systemName: section.icon)
+                            .font(.system(size: 20))
+                            .foregroundStyle(Color.appAccent)
+                            .frame(width: 32, height: 32)
+                            .background(Color.appAccentSoft, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(section.title)
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(Color.appPrimaryText)
+                            Text(section.body)
+                                .font(.footnote)
+                                .foregroundStyle(Color.appSecondaryText)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
+                    .padding(.vertical, 6)
+                }
+            }
+            .listStyle(.insetGrouped)
+            .navigationTitle(L10n.tabHelp)
+            .navigationBarTitleDisplayMode(.large)
+        }
+        .navigationViewStyle(.stack)
+    }
+}
+
+// MARK: - App Info Tab View
+
+private struct AppInfoTabView: View {
+    private var versionString: String {
+        let v = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "?"
+        let b = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "?"
+        return "\(v) (\(b))"
+    }
+
+    private var copyrightYear: Int {
+        Calendar.current.component(.year, from: Date())
+    }
+
+    var body: some View {
+        NavigationView {
+            List {
+                Section {
+                    AppInfoRow(label: L10n.appInfoAppName, value: "PeerSend")
+                    AppInfoRow(label: L10n.appInfoVersion, value: versionString)
+                    AppInfoRow(label: L10n.appInfoDeveloper, value: "rhkr8521")
+                    AppInfoLinkRow(label: L10n.appInfoContact, urlString: "mailto:rhkr8521@rhkr8521.com")
+                }
+                Section {
+                    AppInfoLinkRow(label: L10n.appInfoHomepage, urlString: "https://www.peersend.kro.kr")
+                    AppInfoLinkRow(label: L10n.appInfoPrivacy, urlString: "https://www.peersend.kro.kr/privacy")
+                    AppInfoLinkRow(label: L10n.appInfoTerms, urlString: "https://www.peersend.kro.kr/terms")
+                    AppInfoLinkRow(label: L10n.appInfoOpenSource, urlString: "https://www.peersend.kro.kr/open-source-licenses")
+                }
+            }
+            .listStyle(.insetGrouped)
+            .safeAreaInset(edge: .bottom) {
+                HStack {
+                    Spacer()
+                    Text("© " + String(copyrightYear) + " rhkr8521. All Rights Reserved.")
+                        .font(.footnote)
+                        .foregroundStyle(Color.appSecondaryText)
+                        .multilineTextAlignment(.center)
+                    Spacer()
+                }
+                .padding(.horizontal, 16)
+                .padding(.top, 8)
+                .padding(.bottom, 12)
+                .background(Color(uiColor: .systemGroupedBackground))
+            }
+            .navigationTitle(L10n.tabAppInfo)
+            .navigationBarTitleDisplayMode(.large)
+        }
+        .navigationViewStyle(.stack)
+    }
+}
+
+private struct AppInfoRow: View {
+    let label: String
+    let value: String
+
+    var body: some View {
+        HStack {
+            Text(label)
+                .foregroundStyle(Color.appPrimaryText)
+            Spacer()
+            Text(value)
+                .foregroundStyle(Color.appSecondaryText)
+        }
+    }
+}
+
+private struct AppInfoLinkRow: View {
+    let label: String
+    let urlString: String
+
+    var body: some View {
+        if let url = URL(string: urlString) {
+            Link(destination: url) {
+                HStack {
+                    Text(label)
+                        .foregroundStyle(Color.appPrimaryText)
+                    Spacer()
+                    Image(systemName: "arrow.up.right.square")
+                        .font(.footnote)
+                        .foregroundStyle(Color.appAccent)
+                }
+            }
+        }
+    }
+}
+
+// MARK: - Document Picker
 
 private struct SendDocumentPicker: UIViewControllerRepresentable {
     let onPick: ([URL]) -> Void
@@ -345,8 +794,7 @@ private struct SendDocumentPicker: UIViewControllerRepresentable {
         return picker
     }
 
-    func updateUIViewController(_ uiViewController: UIDocumentPickerViewController, context: Context) {
-    }
+    func updateUIViewController(_ uiViewController: UIDocumentPickerViewController, context: Context) {}
 
     final class Coordinator: NSObject, UIDocumentPickerDelegate {
         private let onPick: ([URL]) -> Void
@@ -364,6 +812,8 @@ private struct SendDocumentPicker: UIViewControllerRepresentable {
         }
     }
 }
+
+// MARK: - Sheet / Dialog Components
 
 private struct SendSourceSheet: View {
     let inDialog: Bool
@@ -386,11 +836,9 @@ private struct SendSourceSheet: View {
                 Text(L10n.sendSourceTitle)
                     .font(.headline)
                     .foregroundStyle(Color.appPrimaryText)
-
                 Text(L10n.sendSourceBody)
                     .font(.body)
                     .foregroundStyle(Color.appSecondaryText)
-
                 VStack(spacing: 10) {
                     PrimaryButton(title: L10n.chooseFromFiles, enabled: true, action: onChooseFiles)
                     SecondaryButton(title: L10n.chooseFromPhotos, action: onChoosePhotos)
@@ -408,7 +856,6 @@ private struct HeroSection: View {
     let tunnelStatus: String
     let onToggleMode: () -> Void
     let onRefresh: () -> Void
-    let onShowHelp: () -> Void
 
     private var displayedDeviceName: String {
         mode == .tunnel && !tunnelSubdomain.isEmpty ? tunnelSubdomain : myName
@@ -423,17 +870,8 @@ private struct HeroSection: View {
     var body: some View {
         CardContainer {
             VStack(alignment: .leading, spacing: 14) {
-                HStack {
-                    Text("PeerSend")
-                        .font(.title3.bold())
-                    Spacer()
-                    Button(L10n.help, action: onShowHelp)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 8)
-                        .contentShape(Rectangle())
-                        .buttonStyle(.plain)
-                        .foregroundStyle(Color.appAccent)
-                }
+                Text("PeerSend")
+                    .font(.title3.bold())
 
                 HStack(spacing: 10) {
                     PillView(text: "\(L10n.deviceNamePrefix) \(displayedDeviceName)", font: deviceFont)
@@ -448,7 +886,7 @@ private struct HeroSection: View {
                     ModeButton(title: L10n.modeTunnel, selected: mode == .tunnel) {
                         if mode != .tunnel { onToggleMode() }
                     }
-                    SecondaryButton(title: L10n.refresh, action: onRefresh)
+                    RefreshButton(action: onRefresh)
                 }
 
                 Text(mode == .lan ? L10n.lanSearching : tunnelStatus)
@@ -476,7 +914,6 @@ private struct ActionSection: View {
                     .font(.footnote)
                     .foregroundStyle(Color.appSecondaryText)
                     .lineLimit(2)
-
                 HStack(spacing: 10) {
                     SecondaryButton(title: L10n.saveFolder, action: onChooseSaveFolder)
                     PrimaryButton(title: L10n.sendFiles, enabled: canSend, action: onOpenFilePicker)
@@ -773,33 +1210,6 @@ private struct InitialTunnelChoiceDialog: View {
     }
 }
 
-private struct HelpDialog: View {
-    let onClose: () -> Void
-
-    var body: some View {
-        DialogCard {
-            VStack(alignment: .leading, spacing: 14) {
-                Text(L10n.help)
-                    .font(.headline)
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 10) {
-                        Text(L10n.helpTextLAN)
-                        Text(L10n.helpTextTunnel)
-                        Text(L10n.helpTextRefresh)
-                        Text(L10n.helpTextSaveFolder)
-                        Text(L10n.helpTextSendFiles)
-                        Text(L10n.helpTextBackground)
-                    }
-                    .font(.body)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                }
-                .frame(maxHeight: 260)
-                SecondaryButton(title: L10n.close, action: onClose)
-            }
-        }
-    }
-}
-
 private struct BlockingDialog: View {
     let title: String
     let message: String
@@ -880,9 +1290,7 @@ private struct OverlayModalBackdrop<Content: View>: View {
             Color.black.opacity(0.32)
                 .ignoresSafeArea()
                 .contentShape(Rectangle())
-                .onTapGesture {
-                    onDismiss?()
-                }
+                .onTapGesture { onDismiss?() }
             content
                 .padding(24)
         }
@@ -895,18 +1303,14 @@ private struct SheetSurface<Content: View>: View {
 
     var body: some View {
         if inDialog {
-            DialogCard {
-                content
-            }
+            DialogCard { content }
         } else {
-            VStack {
-                content
-            }
-            .padding(.horizontal, 20)
-            .padding(.top, 30)
-            .padding(.bottom, 8)
-            .frame(maxWidth: .infinity, alignment: .topLeading)
-            .background(Color.appDialogSurface.ignoresSafeArea())
+            VStack { content }
+                .padding(.horizontal, 20)
+                .padding(.top, 30)
+                .padding(.bottom, 8)
+                .frame(maxWidth: .infinity, alignment: .topLeading)
+                .background(Color.appDialogSurface.ignoresSafeArea())
         }
     }
 }
@@ -1015,6 +1419,33 @@ private struct ModeButton: View {
     }
 }
 
+private struct RefreshButton: View {
+    let action: () -> Void
+    @State private var angle: Double = 0
+
+    var body: some View {
+        Button {
+            withAnimation(.easeOut(duration: 0.5)) {
+                angle += 360
+            }
+            action()
+        } label: {
+            HStack(spacing: 4) {
+                Image(systemName: "arrow.clockwise")
+                    .rotationEffect(.degrees(angle))
+                Text(L10n.refresh)
+                    .font(.subheadline.weight(.semibold))
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 11)
+            .foregroundStyle(Color.appAccent)
+            .background(Color.appAccentSoft, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .contentShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        }
+        .buttonStyle(.plain)
+    }
+}
+
 private extension Color {
     static let appBackgroundTop = adaptive(
         light: UIColor(red: 0.98, green: 0.99, blue: 1.00, alpha: 1.0),
@@ -1088,8 +1519,7 @@ private enum PhotoPickerTransferLoader {
             do {
                 try data.write(to: fileURL, options: .atomic)
                 urls.append(fileURL)
-            } catch {
-            }
+            } catch {}
         }
         return urls
     }

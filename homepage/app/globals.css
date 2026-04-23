@@ -447,13 +447,14 @@ a {
 
 .mobile-hero-stage {
   margin-top: 12px;
-  padding: 16px;
+  padding: 20px 16px;
   border-radius: 28px;
-  border: 1px solid rgba(160, 190, 220, 0.08);
+  border: 1px solid rgba(160, 190, 220, 0.1);
   background:
-    radial-gradient(circle at top left, rgba(97, 230, 213, 0.1), transparent 32%),
-    radial-gradient(circle at bottom right, rgba(255, 135, 96, 0.08), transparent 36%),
-    rgba(255, 255, 255, 0.02);
+    radial-gradient(circle at top left, rgba(97, 230, 213, 0.13), transparent 32%),
+    radial-gradient(circle at bottom right, rgba(255, 135, 96, 0.1), transparent 36%),
+    linear-gradient(180deg, rgba(255,255,255,0.025), rgba(255,255,255,0.01));
+  overflow: hidden;
 }
 
 .action-primary,
@@ -779,6 +780,28 @@ a {
   box-shadow: var(--shadow);
 }
 
+.platform-card-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 4px;
+}
+
+.platform-icon-wrap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  flex-shrink: 0;
+}
+
+.platform-icon {
+  width: 22px;
+  height: 22px;
+}
+
 .platform-label {
   display: inline-flex;
   align-items: center;
@@ -796,6 +819,13 @@ a {
 .section-header h2,
 .timeline-card h3 {
   margin: 18px 0 0;
+  font-size: clamp(1.42rem, 2.8vw, 2.2rem);
+  line-height: 1.12;
+  letter-spacing: -0.04em;
+}
+
+.platform-card h3 {
+  margin-top: 14px;
   font-size: clamp(1.42rem, 2.8vw, 2.2rem);
   line-height: 1.12;
   letter-spacing: -0.04em;
@@ -832,7 +862,7 @@ a {
 }
 
 .mobile-platform-card h3 {
-  margin: 16px 0 0;
+  margin: 14px 0 0;
   font-size: 1.35rem;
   line-height: 1.16;
   letter-spacing: -0.04em;
@@ -875,6 +905,13 @@ a {
   padding-left: 0;
 }
 
+.marquee-group span::after {
+  content: "·";
+  margin-left: 24px;
+  opacity: 0.35;
+  font-weight: 400;
+}
+
 .experience-stack {
   display: grid;
   gap: 36px;
@@ -911,6 +948,41 @@ a {
 
 .mobile-experience-visual {
   min-height: 240px;
+  overflow: hidden;
+  border-radius: 20px;
+}
+
+.mobile-experience-visual .flexible-scene,
+.mobile-experience-visual .flexible-stage {
+  min-height: 230px;
+}
+
+.mobile-experience-visual .flexible-device-pc {
+  left: 2%;
+  transform: translateY(-50%) scale(0.68);
+  transform-origin: left center;
+}
+
+.mobile-experience-visual .flexible-device-phone {
+  right: 2%;
+  transform: translateY(-50%) scale(0.68);
+  transform-origin: right center;
+}
+
+.mobile-experience-visual .remote-scene {
+  min-height: 230px;
+}
+
+.mobile-experience-visual .remote-device-left {
+  left: 2%;
+  transform: translateY(-50%) scale(0.68);
+  transform-origin: left center;
+}
+
+.mobile-experience-visual .remote-device-right {
+  right: 2%;
+  transform: translateY(-50%) scale(0.68);
+  transform-origin: right center;
 }
 
 
@@ -1114,37 +1186,111 @@ a {
   min-height: 140px;
 }
 
+/* Glowing connection line with shimmer */
 .transfer-line {
   position: absolute;
   left: 0;
   right: 0;
   top: 50%;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(160, 190, 220, 0.34), transparent);
+  height: 2px;
   transform: translateY(-50%);
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(97, 230, 213, 0.18) 18%,
+    rgba(255, 197, 98, 0.55) 50%,
+    rgba(97, 230, 213, 0.18) 82%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: lineShimmer 3.2s ease-in-out infinite;
 }
 
-.transfer-file {
+/* Fast-moving light pulse that precedes the packet */
+.transfer-beam {
   position: absolute;
-  left: 8px;
   top: 50%;
-  width: 34px;
-  height: 42px;
-  transform: translateY(-50%);
-  border-radius: 9px;
-  background: linear-gradient(180deg, rgba(255, 135, 96, 0.96), rgba(255, 197, 98, 0.94));
-  box-shadow: 0 14px 30px rgba(255, 135, 96, 0.24);
-  animation: transferFile 2.6s ease-in-out infinite;
+  left: 0;
+  right: 0;
+  height: 0;
+  pointer-events: none;
+  animation: beamMove 2.6s cubic-bezier(0.4, 0, 0.2, 1) infinite;
 }
 
-.transfer-file-fold {
+.transfer-beam::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -28px;
+  width: 56px;
+  height: 5px;
+  transform: translateY(-50%);
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 197, 98, 0.9) 40%,
+    rgba(255, 135, 96, 0.7) 60%,
+    transparent
+  );
+  filter: blur(2.5px);
+  box-shadow: 0 0 14px rgba(255, 197, 98, 0.55);
+}
+
+/* The file packet with arc trajectory */
+.transfer-packet {
+  position: absolute;
+  top: 50%;
+  left: 4px;
+  width: 36px;
+  height: 44px;
+  transform: translateY(-50%);
+  border-radius: 10px 10px 8px 8px;
+  background: linear-gradient(150deg, rgba(255, 145, 70, 1), rgba(255, 205, 70, 0.96));
+  box-shadow:
+    0 0 0 1.5px rgba(255, 205, 80, 0.45),
+    0 8px 22px rgba(255, 140, 70, 0.5),
+    0 0 0 rgba(255, 197, 98, 0);
+  animation: packetTravel 2.6s cubic-bezier(0.4, 0, 0.2, 1) 0.06s infinite;
+  z-index: 2;
+  will-change: left, transform, opacity, box-shadow;
+}
+
+.transfer-packet-fold {
   position: absolute;
   top: 0;
   right: 0;
-  width: 11px;
-  height: 11px;
-  background: rgba(255, 255, 255, 0.42);
+  width: 12px;
+  height: 12px;
+  background: rgba(255, 255, 255, 0.48);
   clip-path: polygon(0 0, 100% 0, 100% 100%);
+  border-radius: 0 10px 0 0;
+}
+
+/* Leading spark particles */
+.ts-spark {
+  position: absolute;
+  top: 50%;
+  border-radius: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  will-change: left, opacity;
+}
+
+.ts-spark-a {
+  width: 7px;
+  height: 7px;
+  background: rgba(255, 205, 80, 0.95);
+  box-shadow: 0 0 12px rgba(255, 205, 80, 0.7), 0 0 24px rgba(255, 205, 80, 0.3);
+  animation: sparkFlow 2.6s cubic-bezier(0.4, 0, 0.2, 1) -0.22s infinite;
+}
+
+.ts-spark-b {
+  width: 4px;
+  height: 4px;
+  background: rgba(97, 230, 213, 0.92);
+  box-shadow: 0 0 8px rgba(97, 230, 213, 0.65);
+  animation: sparkFlow 2.6s cubic-bezier(0.4, 0, 0.2, 1) -0.72s infinite;
 }
 
 .flexible-scene {
@@ -1230,15 +1376,23 @@ a {
   margin-top: auto;
 }
 
-.flexible-meter span {
+.flexible-meter-bar {
   display: block;
   height: 8px;
   border-radius: 999px;
-  background: linear-gradient(90deg, rgba(97, 230, 213, 0.52), rgba(127, 179, 255, 0.22));
+  background: linear-gradient(
+    90deg,
+    rgba(97, 230, 213, 0.55) 0%,
+    rgba(127, 179, 255, 0.4) 50%,
+    rgba(97, 230, 213, 0.15) 100%
+  );
+  background-size: 200% 100%;
+  animation: meterShimmer 2.4s ease-in-out infinite;
 }
 
-.flexible-meter span:last-child {
+.flexible-meter-bar:last-child {
   width: 68%;
+  animation-delay: 0.4s;
 }
 
 .flexible-flow-lane {
@@ -1246,14 +1400,23 @@ a {
   inset: 0;
 }
 
+/* Two distinct lanes for FILE and ZIP streams */
 .flexible-lane-line {
   position: absolute;
   left: 23%;
   right: 23%;
-  top: 52%;
   height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(160, 190, 220, 0.4), transparent);
-  transform: translateY(-50%);
+  background: linear-gradient(90deg, transparent, rgba(160, 190, 220, 0.35), transparent);
+}
+
+.flexible-lane-upper {
+  top: 42%;
+  background: linear-gradient(90deg, transparent, rgba(97, 230, 213, 0.38), transparent);
+}
+
+.flexible-lane-lower {
+  top: 60%;
+  background: linear-gradient(90deg, transparent, rgba(127, 179, 255, 0.28), transparent);
 }
 
 .lane-chip {
@@ -1262,50 +1425,82 @@ a {
   align-items: center;
   justify-content: center;
   min-width: 62px;
-  height: 36px;
+  height: 34px;
   padding: 0 14px;
-  border-radius: 12px;
-  border: 1px solid rgba(160, 190, 220, 0.12);
-  color: rgba(243, 246, 251, 0.94);
-  font-size: 0.76rem;
+  border-radius: 10px;
+  border: 1px solid rgba(160, 190, 220, 0.14);
+  color: rgba(243, 246, 251, 0.96);
+  font-size: 0.74rem;
   font-weight: 800;
   letter-spacing: 0.08em;
-  backdrop-filter: blur(12px);
+  backdrop-filter: blur(14px);
 }
 
 .lane-chip-primary {
-  left: 31%;
-  top: 38%;
-  background: rgba(255, 255, 255, 0.08);
-  animation: laneFilePrimary 3.4s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+  left: 28%;
+  top: 34%;
+  background: rgba(97, 230, 213, 0.12);
+  border-color: rgba(97, 230, 213, 0.22);
+  color: rgba(186, 242, 232, 0.96);
+  animation: laneChipFlow 3.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) infinite;
 }
 
 .lane-chip-secondary {
-  left: 34%;
-  top: 58%;
-  background: linear-gradient(180deg, rgba(97, 230, 213, 0.18), rgba(127, 179, 255, 0.16));
-  animation: laneFileSecondary 3.4s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+  left: 30%;
+  top: 54%;
+  background: linear-gradient(180deg, rgba(127, 179, 255, 0.16), rgba(97, 230, 213, 0.12));
+  border-color: rgba(127, 179, 255, 0.22);
+  color: rgba(205, 223, 255, 0.96);
+  animation: laneChipFlowLow 3.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) 0.55s infinite;
+}
+
+/* Relay nodes — visual "waypoints" on the lane */
+.lane-relay {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(160, 190, 220, 0.4);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.lane-relay-a {
+  left: 42%;
+  top: calc(42% - 4px);
+  animation: relayBlink 3.4s ease-in-out 0.3s infinite;
+}
+
+.lane-relay-b {
+  left: 56%;
+  top: calc(60% - 4px);
+  animation: relayBlink 3.4s ease-in-out 0.85s infinite;
+}
+
+.lane-relay-c {
+  left: 62%;
+  top: calc(42% - 4px);
+  animation: relayBlink 3.4s ease-in-out 1.4s infinite;
 }
 
 .lane-glow {
   position: absolute;
-  width: 10px;
-  height: 10px;
+  width: 9px;
+  height: 9px;
   border-radius: 50%;
-  background: rgba(255, 197, 98, 0.92);
-  box-shadow: 0 0 16px rgba(255, 197, 98, 0.42);
+  background: rgba(255, 197, 98, 0.9);
+  box-shadow: 0 0 14px rgba(255, 197, 98, 0.5), 0 0 28px rgba(255, 197, 98, 0.2);
 }
 
 .lane-glow-a {
-  left: 57%;
-  top: 30%;
+  left: 48%;
+  top: 36%;
   animation: laneGlowFloat 2.8s ease-in-out infinite;
 }
 
 .lane-glow-b {
   left: 64%;
-  top: 64%;
-  animation: laneGlowFloat 2.8s ease-in-out 0.45s infinite;
+  top: 56%;
+  animation: laneGlowFloat 2.8s ease-in-out 0.5s infinite;
 }
 
 .flexible-stack {
@@ -1325,10 +1520,22 @@ a {
   color: rgba(243, 246, 251, 0.86);
   font-size: 0.82rem;
   font-weight: 700;
+  opacity: 0;
+  transform: translateX(8px);
 }
 
-.flexible-stack-item:last-child {
-  background: linear-gradient(180deg, rgba(97, 230, 213, 0.18), rgba(127, 179, 255, 0.14));
+.flex-recv-1 {
+  animation: stackItemAppear 3.4s ease-out 0.6s infinite;
+}
+
+.flex-recv-2 {
+  animation: stackItemAppear 3.4s ease-out 1.0s infinite;
+}
+
+.flex-recv-3 {
+  background: linear-gradient(135deg, rgba(97, 230, 213, 0.16), rgba(127, 179, 255, 0.12));
+  border-color: rgba(97, 230, 213, 0.14);
+  animation: stackItemAppear 3.4s ease-out 1.5s infinite;
 }
 
 .spectrum-grid {
@@ -1417,9 +1624,10 @@ a {
   right: 22%;
   top: 50%;
   height: 150px;
-  border-top: 1px solid rgba(160, 190, 220, 0.34);
+  border-top: 1.5px solid rgba(127, 179, 255, 0.38);
   border-radius: 999px 999px 0 0;
   transform: translateY(-50%);
+  animation: arcGlow 3.6s ease-in-out infinite;
 }
 
 .remote-bridge-arc-soft {
@@ -1427,18 +1635,61 @@ a {
   left: 27%;
   right: 27%;
   height: 108px;
-  border-top-color: rgba(97, 230, 213, 0.18);
+  border-top-width: 1px;
+  border-top-color: rgba(97, 230, 213, 0.22);
+  animation: arcGlowSoft 3.6s ease-in-out 0.5s infinite;
+}
+
+/* Central relay server node at the apex of the arc */
+.remote-relay {
+  position: absolute;
+  left: 50%;
+  top: calc(50% - 83px);
+  transform: translateX(-50%);
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.remote-relay-ring {
+  position: absolute;
+  border-radius: 50%;
+  border: 1px solid rgba(97, 230, 213, 0.5);
+}
+
+.remote-relay-ring-a {
+  width: 32px;
+  height: 32px;
+  animation: relayRingPulse 2.8s ease-out infinite;
+}
+
+.remote-relay-ring-b {
+  width: 22px;
+  height: 22px;
+  animation: relayRingPulse 2.8s ease-out 0.55s infinite;
+}
+
+.remote-relay-core {
+  position: relative;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(97, 230, 213, 1), rgba(127, 179, 255, 0.8));
+  box-shadow: 0 0 12px rgba(97, 230, 213, 0.8), 0 0 28px rgba(97, 230, 213, 0.35);
+  animation: relayCoreGlow 2.8s ease-in-out infinite;
 }
 
 .remote-bridge-label {
   position: absolute;
   left: 50%;
-  top: 31.5%;
+  top: 31%;
   transform: translateX(-50%);
-  color: rgba(243, 246, 251, 0.64);
-  font-size: 0.76rem;
+  color: rgba(97, 230, 213, 0.72);
+  font-size: 0.72rem;
   font-weight: 800;
-  letter-spacing: 0.22em;
+  letter-spacing: 0.24em;
   text-transform: uppercase;
 }
 
@@ -1447,57 +1698,59 @@ a {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 62px;
-  height: 36px;
-  padding: 0 14px;
-  border-radius: 12px;
-  border: 1px solid rgba(160, 190, 220, 0.1);
-  background: rgba(255, 255, 255, 0.08);
-  color: rgba(243, 246, 251, 0.94);
-  font-size: 0.76rem;
+  min-width: 60px;
+  height: 34px;
+  padding: 0 13px;
+  border-radius: 10px;
+  border: 1px solid rgba(160, 190, 220, 0.14);
+  background: rgba(255, 255, 255, 0.09);
+  color: rgba(243, 246, 251, 0.96);
+  font-size: 0.74rem;
   font-weight: 800;
   letter-spacing: 0.08em;
-  backdrop-filter: blur(12px);
+  backdrop-filter: blur(14px);
 }
 
 .remote-packet-a {
-  left: 32%;
-  top: 46%;
-  animation: remotePacketOne 3.6s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+  left: 26%;
+  top: 50%;
+  animation: remotePacketOne 3.6s cubic-bezier(0.35, 0, 0.25, 1) infinite;
 }
 
 .remote-packet-b {
-  left: 37%;
-  top: 34%;
-  background: linear-gradient(180deg, rgba(97, 230, 213, 0.18), rgba(127, 179, 255, 0.14));
-  animation: remotePacketTwo 3.6s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+  left: 28%;
+  top: 50%;
+  background: linear-gradient(135deg, rgba(97, 230, 213, 0.18), rgba(127, 179, 255, 0.16));
+  border-color: rgba(97, 230, 213, 0.2);
+  animation: remotePacketTwo 3.6s cubic-bezier(0.35, 0, 0.25, 1) 0.7s infinite;
 }
 
+/* Small floating nodes along the arc */
 .remote-node {
   position: absolute;
-  width: 10px;
-  height: 10px;
+  width: 9px;
+  height: 9px;
   border-radius: 50%;
-  background: rgba(255, 197, 98, 0.92);
-  box-shadow: 0 0 18px rgba(255, 197, 98, 0.42);
+  background: rgba(255, 197, 98, 0.88);
+  box-shadow: 0 0 16px rgba(255, 197, 98, 0.5), 0 0 32px rgba(255, 197, 98, 0.2);
 }
 
 .remote-node-a {
-  left: 43%;
-  top: 24%;
-  animation: remoteNodePulse 2.8s ease-in-out infinite;
+  left: 38%;
+  top: 30%;
+  animation: remoteNodePulse 2.4s ease-in-out infinite;
 }
 
 .remote-node-b {
-  left: 56%;
-  top: 20%;
-  animation: remoteNodePulse 2.8s ease-in-out 0.45s infinite;
+  left: 50%;
+  top: 24%;
+  animation: remoteNodePulse 2.4s ease-in-out 0.5s infinite;
 }
 
 .remote-node-c {
-  left: 61%;
-  top: 42%;
-  animation: remoteNodePulse 2.8s ease-in-out 0.9s infinite;
+  left: 62%;
+  top: 30%;
+  animation: remoteNodePulse 2.4s ease-in-out 1.0s infinite;
 }
 
 .engine-grid {
@@ -1594,6 +1847,19 @@ a {
 
 .mobile-download-tile {
   min-height: 146px;
+  border-left-width: 2px;
+}
+
+.mobile-download-list .mobile-download-tile:nth-child(1) {
+  border-left-color: rgba(127, 179, 255, 0.45);
+}
+
+.mobile-download-list .mobile-download-tile:nth-child(2) {
+  border-left-color: rgba(97, 230, 213, 0.45);
+}
+
+.mobile-download-list .mobile-download-tile:nth-child(3) {
+  border-left-color: rgba(255, 135, 96, 0.45);
 }
 
 .download-tile {
@@ -2154,109 +2420,265 @@ a {
     transform: translateX(0);
   }
   to {
-    transform: translateX(-50%);
+    transform: translateX(-25%);
   }
 }
 
-@keyframes transferFile {
-  0%,
-  100% {
-    left: 8px;
-    opacity: 0.88;
-    transform: translateY(-50%) scale(0.96);
+/* ===== NEW TRANSFER SCENE KEYFRAMES ===== */
+
+@keyframes lineShimmer {
+  0%, 100% { background-position: 100% 0; opacity: 0.55; }
+  50% { background-position: 0% 0; opacity: 1; }
+}
+
+@keyframes beamMove {
+  0% { transform: translateX(-8%); opacity: 0; }
+  7% { opacity: 1; }
+  93% { opacity: 1; }
+  100% { transform: translateX(108%); opacity: 0; }
+}
+
+@keyframes packetTravel {
+  0%, 6% {
+    left: 4px;
+    transform: translateY(-30%) scale(0.55);
+    opacity: 0;
+    box-shadow: none;
+  }
+  14% {
+    left: 4px;
+    transform: translateY(-50%) scale(1.06);
+    opacity: 1;
+    box-shadow:
+      0 0 0 1.5px rgba(255, 205, 80, 0.5),
+      0 8px 22px rgba(255, 140, 70, 0.55),
+      0 0 40px rgba(255, 197, 98, 0.25);
   }
   50% {
-    left: calc(100% - 42px);
+    left: calc(50% - 18px);
+    transform: translateY(-72%) scale(1.14);
     opacity: 1;
-    transform: translateY(-50%) scale(1.04);
+    box-shadow:
+      0 0 0 2px rgba(255, 205, 80, 0.65),
+      0 14px 38px rgba(255, 140, 70, 0.7),
+      0 0 64px rgba(255, 197, 98, 0.45);
+  }
+  86% {
+    left: calc(100% - 40px);
+    transform: translateY(-50%) scale(1.06);
+    opacity: 1;
+    box-shadow:
+      0 0 0 1.5px rgba(255, 205, 80, 0.4),
+      0 8px 20px rgba(255, 140, 70, 0.45),
+      0 0 36px rgba(255, 197, 98, 0.2);
+  }
+  94%, 100% {
+    left: calc(100% - 40px);
+    transform: translateY(-30%) scale(0.55);
+    opacity: 0;
+    box-shadow: none;
   }
 }
 
-@keyframes laneFilePrimary {
-  0%,
-  10% {
-    transform: translate3d(0, 0, 0) scale(0.96);
+@keyframes sparkFlow {
+  0% { left: 0; opacity: 0; transform: translateY(-50%) scale(0.5); }
+  8% { opacity: 1; transform: translateY(-50%) scale(1); }
+  92% { opacity: 0.9; transform: translateY(-50%) scale(1); }
+  100% { left: 100%; opacity: 0; transform: translateY(-50%) scale(0.5); }
+}
+
+/* ===== NEW FLEXIBLE SCENE KEYFRAMES ===== */
+
+@keyframes meterShimmer {
+  0% { background-position: 100% 0; }
+  100% { background-position: -100% 0; }
+}
+
+@keyframes laneChipFlow {
+  0%, 8% {
+    transform: translate3d(0, 0, 0) scale(0.82);
     opacity: 0;
   }
-  50% {
-    transform: translate3d(114px, 8px, 0) scale(1);
+  22% {
+    transform: translate3d(20px, 0, 0) scale(1.04);
     opacity: 1;
   }
-  100% {
-    transform: translate3d(188px, 0, 0) scale(0.94);
+  60% {
+    transform: translate3d(130px, -4px, 0) scale(1);
+    opacity: 1;
+  }
+  88%, 100% {
+    transform: translate3d(200px, 0, 0) scale(0.86);
     opacity: 0;
   }
 }
 
-@keyframes laneFileSecondary {
-  0%,
-  18% {
-    transform: translate3d(0, 0, 0) scale(0.96);
+@keyframes laneChipFlowLow {
+  0%, 8% {
+    transform: translate3d(0, 0, 0) scale(0.82);
     opacity: 0;
   }
-  50% {
-    transform: translate3d(104px, -14px, 0) scale(1);
+  22% {
+    transform: translate3d(18px, 0, 0) scale(1.04);
     opacity: 1;
   }
-  100% {
-    transform: translate3d(178px, -4px, 0) scale(0.94);
+  60% {
+    transform: translate3d(124px, 4px, 0) scale(1);
+    opacity: 1;
+  }
+  88%, 100% {
+    transform: translate3d(192px, 0, 0) scale(0.86);
     opacity: 0;
   }
+}
+
+@keyframes relayBlink {
+  0%, 30% { opacity: 0.2; transform: scale(0.8); }
+  45% { opacity: 1; transform: scale(1.3); background: rgba(97, 230, 213, 0.5); }
+  60%, 100% { opacity: 0.2; transform: scale(0.8); }
 }
 
 @keyframes laneGlowFloat {
-  0%,
-  100% {
-    transform: translate3d(0, 0, 0) scale(0.84);
-    opacity: 0.48;
+  0%, 100% {
+    transform: translate3d(0, 0, 0) scale(0.78);
+    opacity: 0.35;
   }
-  50% {
-    transform: translate3d(10px, -6px, 0) scale(1.08);
-    opacity: 0.92;
+  40% {
+    transform: translate3d(12px, -8px, 0) scale(1.15);
+    opacity: 1;
+  }
+  70% {
+    transform: translate3d(22px, -4px, 0) scale(0.95);
+    opacity: 0.7;
   }
 }
 
+@keyframes stackItemAppear {
+  0%, 15% {
+    opacity: 0;
+    transform: translateX(12px) scale(0.92);
+  }
+  30% {
+    opacity: 1;
+    transform: translateX(0) scale(1.02);
+  }
+  70% {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+  88%, 100% {
+    opacity: 0;
+    transform: translateX(-4px) scale(0.96);
+  }
+}
+
+/* ===== NEW REMOTE SCENE KEYFRAMES ===== */
+
+@keyframes arcGlow {
+  0%, 100% { border-top-color: rgba(127, 179, 255, 0.28); }
+  50% { border-top-color: rgba(127, 179, 255, 0.58); }
+}
+
+@keyframes arcGlowSoft {
+  0%, 100% { border-top-color: rgba(97, 230, 213, 0.14); }
+  50% { border-top-color: rgba(97, 230, 213, 0.38); }
+}
+
+@keyframes relayRingPulse {
+  0% { transform: scale(1); opacity: 0.7; }
+  60% { transform: scale(2.4); opacity: 0; }
+  100% { transform: scale(2.4); opacity: 0; }
+}
+
+@keyframes relayCoreGlow {
+  0%, 100% {
+    box-shadow: 0 0 10px rgba(97, 230, 213, 0.7), 0 0 22px rgba(97, 230, 213, 0.3);
+    transform: scale(0.92);
+  }
+  50% {
+    box-shadow: 0 0 18px rgba(97, 230, 213, 1), 0 0 40px rgba(97, 230, 213, 0.55);
+    transform: scale(1.12);
+  }
+}
+
+/* Packets traveling along the arc — upper path (FILE) */
 @keyframes remotePacketOne {
-  0%,
-  12% {
-    transform: translate3d(0, 0, 0) scale(0.94);
+  0%, 10% {
+    transform: translate3d(0, 0, 0) scale(0.8);
     opacity: 0;
   }
-  50% {
-    transform: translate3d(112px, -62px, 0) scale(1);
+  18% {
+    transform: translate3d(16px, -8px, 0) scale(1);
     opacity: 1;
   }
-  100% {
-    transform: translate3d(206px, -6px, 0) scale(0.94);
+  35% {
+    transform: translate3d(72px, -72px, 0) scale(1.04);
+    opacity: 1;
+  }
+  50% {
+    transform: translate3d(128px, -96px, 0) scale(1.06);
+    opacity: 1;
+  }
+  65% {
+    transform: translate3d(188px, -72px, 0) scale(1.04);
+    opacity: 1;
+  }
+  82% {
+    transform: translate3d(224px, -8px, 0) scale(1);
+    opacity: 1;
+  }
+  92%, 100% {
+    transform: translate3d(240px, 0, 0) scale(0.8);
     opacity: 0;
   }
 }
 
+/* Packets traveling along the arc — lower path (ZIP) */
 @keyframes remotePacketTwo {
-  0%,
-  18% {
-    transform: translate3d(0, 0, 0) scale(0.94);
+  0%, 10% {
+    transform: translate3d(0, 0, 0) scale(0.8);
     opacity: 0;
   }
-  50% {
-    transform: translate3d(94px, 20px, 0) scale(1);
+  18% {
+    transform: translate3d(14px, -6px, 0) scale(1);
     opacity: 1;
   }
-  100% {
-    transform: translate3d(186px, 66px, 0) scale(0.94);
+  35% {
+    transform: translate3d(64px, -58px, 0) scale(1.04);
+    opacity: 1;
+  }
+  50% {
+    transform: translate3d(118px, -78px, 0) scale(1.06);
+    opacity: 1;
+  }
+  65% {
+    transform: translate3d(174px, -58px, 0) scale(1.04);
+    opacity: 1;
+  }
+  82% {
+    transform: translate3d(212px, -6px, 0) scale(1);
+    opacity: 1;
+  }
+  92%, 100% {
+    transform: translate3d(228px, 0, 0) scale(0.8);
     opacity: 0;
   }
 }
 
 @keyframes remoteNodePulse {
-  0%,
-  100% {
-    transform: scale(0.84);
-    opacity: 0.42;
+  0%, 100% {
+    transform: scale(0.72);
+    opacity: 0.32;
+    box-shadow: 0 0 8px rgba(255, 197, 98, 0.3);
   }
-  50% {
-    transform: scale(1.14);
+  40% {
+    transform: scale(1.28);
     opacity: 1;
+    box-shadow: 0 0 20px rgba(255, 197, 98, 0.65), 0 0 40px rgba(255, 197, 98, 0.25);
+  }
+  70% {
+    transform: scale(0.96);
+    opacity: 0.8;
   }
 }
 

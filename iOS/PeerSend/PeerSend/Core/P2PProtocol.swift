@@ -7,7 +7,7 @@ let localFilePort: UInt16 = 50_000
 let pollInterval: TimeInterval = 3.0
 let deviceTimeout: TimeInterval = 20.0
 
-let defaultTunnelHost = "rhkr8521-tunnel.kro.kr"
+let defaultTunnelHost = "tunneler-peersend.kro.kr"
 let defaultTunnelToken = "public-p2p-token-8521"
 let defaultTunnelSubPrefix = "ft"
 let tunnelTCPName = "file_tunnel"

@@ -57,3 +57,12 @@ struct AppStoreUpdateInfo {
     let url: URL
 }
 
+struct ReceivedFileItem: Identifiable {
+    let id: UUID
+    let url: URL
+    let name: String
+    let receivedDate: Date
+    let isVideo: Bool
+    let isImage: Bool
+}
+

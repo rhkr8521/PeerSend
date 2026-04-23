@@ -6,6 +6,28 @@ enum L10n {
     }
 
     static var help: String { isKorean ? "도움말" : "Help" }
+    static var tabTransfer: String { isKorean ? "전송" : "Transfer" }
+    static var tabGallery: String { isKorean ? "갤러리" : "Gallery" }
+    static var tabHelp: String { isKorean ? "도움말" : "Help" }
+    static var tabAppInfo: String { isKorean ? "앱 정보" : "App Info" }
+    static var galleryEmpty: String { isKorean ? "받은 이미지 또는 동영상이 없습니다." : "No received images or videos." }
+    static var gallerySaveToPhotos: String { isKorean ? "사진 앱에 저장" : "Save to Photos" }
+    static var gallerySelectAll: String { isKorean ? "전체 선택" : "Select All" }
+    static var galleryClearSelection: String { isKorean ? "선택 해제" : "Deselect" }
+    static func gallerySelectedCount(_ count: Int) -> String { isKorean ? "\(count)개 선택됨" : "\(count) selected" }
+    static func gallerySavedCount(_ count: Int) -> String { isKorean ? "\(count)개 항목을 사진 앱에 저장했습니다." : "Saved \(count) item(s) to Photos." }
+    static var galleryPhotoAccessDenied: String { isKorean ? "사진 접근 권한이 없습니다. 설정에서 허용해주세요." : "Photo access denied. Please allow it in Settings." }
+    static var galleryVideoLabel: String { isKorean ? "동영상" : "Video" }
+    static var appInfoAppName: String { isKorean ? "앱 이름" : "App Name" }
+    static var appInfoVersion: String { isKorean ? "버전" : "Version" }
+    static var appInfoDeveloper: String { isKorean ? "개발자" : "Developer" }
+    static var appInfoContact: String { isKorean ? "문의하기" : "Contact" }
+    static var appInfoHomepage: String { isKorean ? "홈페이지" : "Homepage" }
+    static var appInfoPrivacy: String { isKorean ? "개인정보 처리방침" : "Privacy Policy" }
+    static var appInfoTerms: String { isKorean ? "이용약관" : "Terms of Service" }
+    static var appInfoOpenSource: String { isKorean ? "오픈소스 라이선스" : "Open Source Licenses" }
+    static var galleryDeleteSelected: String { isKorean ? "삭제" : "Delete" }
+    static func galleryDeletedCount(_ count: Int) -> String { isKorean ? "\(count)개 항목을 삭제했습니다." : "Deleted \(count) item(s)." }
     static var deviceNamePrefix: String { isKorean ? "기기명" : "Device" }
     static var ipPrefix: String { isKorean ? "IP" : "IP" }
     static var modeLAN: String { isKorean ? "LAN 모드" : "LAN Mode" }
@@ -69,7 +91,7 @@ enum L10n {
         isKorean ? "LAN 모드: 같은 와이파이에 있는 기기를 자동으로 찾고 바로 전송합니다." : "LAN mode: automatically finds devices on the same Wi-Fi and sends files directly."
     }
     static var helpTextTunnel: String {
-        isKorean ? "터널 모드: 들어가면 저장된 설정으로 한 번 자동 연결을 시도합니다. 서버 설정을 바꾼 뒤에는 적용 및 재연결을 눌러 다시 연결하세요." : "Tunnel mode: entering it will try one automatic connection with the saved settings. After editing server settings, use Apply and Reconnect."
+        isKorean ? "터널 모드: 외부 네트워크 상에서도 P2P로 파일을 직접 주고받을 수 있습니다. 들어가면 저장된 설정으로 한 번 자동 연결을 시도하고, 서버 설정을 바꾼 뒤에는 적용 및 재연결을 눌러 다시 연결하세요." : "Tunnel mode: lets you exchange files directly over P2P even across external networks. It tries one automatic connection with the saved settings when you enter, and after editing server settings use Apply and Reconnect."
     }
     static var helpTextRefresh: String {
         isKorean ? "새로고침: LAN은 즉시 재검색하고, 터널은 피어 목록을 다시 불러오며 필요하면 연결도 다시 시도합니다." : "Refresh: LAN rescans immediately, while Tunnel reloads peers and retries the connection if needed."
@@ -79,6 +101,9 @@ enum L10n {
     }
     static var helpTextSendFiles: String {
         isKorean ? "파일 전송: 기기를 먼저 선택한 뒤 파일 전송을 누르면 파일 앱이나 사진 보관함에서 여러 항목을 한 번에 보낼 수 있습니다." : "Send Files: select a device first, then tap Send Files to pick multiple items from Files or Photos."
+    }
+    static var helpTextGallery: String {
+        isKorean ? "갤러리: 받은 파일 중 이미지와 동영상을 한눈에 관리하고 삭제할 수 있습니다. 핸드폰 갤러리에 넣고 싶은 항목을 선택한 뒤 사진 앱에 저장 버튼을 누르면 사진 앱에서 확인할 수 있습니다." : "Gallery: manage and delete received images and videos at a glance. To add items to the device gallery, select them and tap Save to Photos."
     }
     static var helpTextBackground: String {
         isKorean ? "백그라운드 전송: iOS에서는 진행 중인 전송만 제한적으로 백그라운드 시간을 연장합니다." : "Background transfer: on iOS, ongoing transfers can only be extended for limited background time."

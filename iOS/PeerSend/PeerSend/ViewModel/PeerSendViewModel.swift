@@ -2,6 +2,8 @@ import Foundation
 import SwiftUI
 import UIKit
 import Combine
+import AVFoundation
+import Photos
 
 enum BlockingPrompt: Identifiable, Equatable {
     case notificationPermission
@@ -40,6 +42,7 @@ final class PeerSendViewModel: ObservableObject {
     @Published var isBusy = false
     @Published var eventMessage: String?
     @Published var blockingPrompt: BlockingPrompt?
+    @Published var receivedFiles: [ReceivedFileItem] = []
 
     private let preferences: AppPreferences
     private let storage: FileTransferStorage
@@ -142,6 +145,81 @@ final class PeerSendViewModel: ObservableObject {
             guard let self else { return }
             await self.refreshStartupPrompts()
         }
+        refreshReceivedFiles()
+    }
+
+    func refreshReceivedFiles() {
+        Task.detached { [weak self] in
+            guard let self else { return }
+            let items = await self.scanReceivedFiles()
+            await MainActor.run { self.receivedFiles = items }
+        }
+    }
+
+    func saveToPhotos(items: [ReceivedFileItem]) async -> String {
+        let status = await PHPhotoLibrary.requestAuthorization(for: .addOnly)
+        guard status == .authorized || status == .limited else {
+            return L10n.galleryPhotoAccessDenied
+        }
+        var count = 0
+        do {
+            try await PHPhotoLibrary.shared().performChanges {
+                for item in items {
+                    if item.isVideo {
+                        PHAssetChangeRequest.creationRequestForAssetFromVideo(atFileURL: item.url)
+                    } else {
+                        PHAssetChangeRequest.creationRequestForAssetFromImage(atFileURL: item.url)
+                    }
+                    count += 1
+                }
+            }
+            return L10n.gallerySavedCount(count)
+        } catch {
+            return error.localizedDescription
+        }
+    }
+
+    func deleteReceivedFiles(items: [ReceivedFileItem]) {
+        Task.detached { [weak self] in
+            guard let self else { return }
+            let scopedDir = try? self.storage.accessCurrentRoot()
+            defer { scopedDir?.stopAccessing() }
+            let fileManager = FileManager.default
+            for item in items {
+                try? fileManager.removeItem(at: item.url)
+            }
+            let updated = await self.scanReceivedFiles()
+            await MainActor.run { self.receivedFiles = updated }
+        }
+    }
+
+    private func scanReceivedFiles() async -> [ReceivedFileItem] {
+        guard let scopedDir = try? storage.accessCurrentRoot() else { return [] }
+        defer { scopedDir.stopAccessing() }
+
+        let rootURL = scopedDir.url
+        let fileManager = FileManager.default
+        let imageExts: Set<String> = ["jpg", "jpeg", "png", "gif", "heic", "heif", "webp", "bmp", "tiff"]
+        let videoExts: Set<String> = ["mp4", "mov", "m4v", "avi", "mkv", "webm"]
+
+        guard let enumerator = fileManager.enumerator(
+            at: rootURL,
+            includingPropertiesForKeys: [.creationDateKey, .isDirectoryKey],
+            options: [.skipsHiddenFiles, .skipsSubdirectoryDescendants]
+        ) else { return [] }
+
+        var items: [ReceivedFileItem] = []
+        for case let fileURL as URL in enumerator {
+            let rv = try? fileURL.resourceValues(forKeys: [.creationDateKey, .isDirectoryKey])
+            if rv?.isDirectory == true { continue }
+            let ext = fileURL.pathExtension.lowercased()
+            let isImage = imageExts.contains(ext)
+            let isVideo = videoExts.contains(ext)
+            guard isImage || isVideo else { continue }
+            let date = rv?.creationDate ?? Date.distantPast
+            items.append(ReceivedFileItem(id: UUID(), url: fileURL, name: fileURL.lastPathComponent, receivedDate: date, isVideo: isVideo, isImage: isImage))
+        }
+        return items.sorted { $0.receivedDate > $1.receivedDate }
     }
 
     func refreshStartupPrompts() async {
@@ -796,12 +874,12 @@ final class PeerSendViewModel: ObservableObject {
             return
         }
 
-        var components = URLComponents(url: endpoints.adminBaseURL.appendingPathComponent("_health"), resolvingAgainstBaseURL: false)
-        components?.queryItems = [URLQueryItem(name: "token", value: activeTunnelToken)]
-        guard let url = components?.url else { return }
+        let healthURL = endpoints.adminBaseURL.appendingPathComponent("_health")
+        var healthRequest = URLRequest(url: healthURL)
+        healthRequest.setValue("Bearer \(activeTunnelToken)", forHTTPHeaderField: "Authorization")
 
         do {
-            let (data, response) = try await urlSession.data(from: url)
+            let (data, response) = try await urlSession.data(for: healthRequest)
             if let response = response as? HTTPURLResponse, !(200...299).contains(response.statusCode) {
                 throw NSError(domain: "Tunnel", code: response.statusCode, userInfo: [NSLocalizedDescriptionKey: "HTTP \(response.statusCode)"])
             }
@@ -1063,6 +1141,7 @@ final class PeerSendViewModel: ObservableObject {
                 storage.deleteItem(at: directURL)
                 clearProgress()
                 emitEvent(L10n.zipExtractComplete(extractedCount))
+                refreshReceivedFiles()
             } catch {
                 clearProgress()
                 emitEvent(L10n.zipExtractFailed(error.localizedDescription, saveRootLabel))
@@ -1070,6 +1149,7 @@ final class PeerSendViewModel: ObservableObject {
         } else {
             clearProgress()
             emitEvent(L10n.receiveComplete(directURL.lastPathComponent))
+            refreshReceivedFiles()
         }
     }
 
@@ -1173,6 +1253,7 @@ final class PeerSendViewModel: ObservableObject {
 
         clearProgress()
         emitEvent(L10n.multiReceiveComplete(savedURLs.count))
+        refreshReceivedFiles()
     }
 
     private func startOutgoingTransfer(
@@ -1514,7 +1595,7 @@ final class PeerSendViewModel: ObservableObject {
         }
     }
 
-    private func emitEvent(_ message: String) {
+    func emitEvent(_ message: String) {
         publish { self.eventMessage = message }
         Task.detached { [weak self] in
             try? await Task.sleep(nanoseconds: 3_000_000_000)

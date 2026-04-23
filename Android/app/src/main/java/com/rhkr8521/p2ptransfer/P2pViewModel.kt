@@ -5,6 +5,9 @@ import android.content.Context
 import android.net.Uri
 import android.net.wifi.WifiManager
 import android.os.Build
+import android.content.ContentUris
+import androidx.documentfile.provider.DocumentFile
+import android.provider.MediaStore
 import android.provider.OpenableColumns
 import android.util.Base64
 import androidx.annotation.PluralsRes
@@ -202,6 +205,96 @@ class P2pViewModel(
         startLanListenLoop()
         startLanTransferServer()
         startCleanupLoop()
+        refreshReceivedFiles()
+    }
+
+    fun refreshReceivedFiles() {
+        viewModelScope.launch(Dispatchers.IO) {
+            val files = scanReceivedFiles()
+            _uiState.update { it.copy(receivedFiles = files) }
+        }
+    }
+
+    fun deleteReceivedFiles(uris: List<Uri>) {
+        viewModelScope.launch(Dispatchers.IO) {
+            uris.forEach { uri ->
+                runCatching {
+                    val doc = DocumentFile.fromSingleUri(appContext, uri)
+                    if (doc?.canWrite() == true) {
+                        doc.delete()
+                    } else {
+                        appContext.contentResolver.delete(uri, null, null)
+                    }
+                }
+            }
+            refreshReceivedFiles()
+        }
+    }
+
+    private fun scanReceivedFiles(): List<com.rhkr8521.p2ptransfer.core.ReceivedFile> {
+        val result = mutableListOf<com.rhkr8521.p2ptransfer.core.ReceivedFile>()
+
+        val treeUri = storage.currentSaveTreeUri()
+        if (treeUri != null) {
+            val treeRoot = DocumentFile.fromTreeUri(appContext, treeUri)
+            treeRoot?.listFiles()?.forEach { doc ->
+                if (!doc.isFile) return@forEach
+                val mime = doc.type ?: return@forEach
+                val isImage = mime.startsWith("image/")
+                val isVideo = mime.startsWith("video/")
+                if (!isImage && !isVideo) return@forEach
+                result += com.rhkr8521.p2ptransfer.core.ReceivedFile(
+                    uri = doc.uri,
+                    name = doc.name ?: "file",
+                    mimeType = mime,
+                    dateMs = doc.lastModified(),
+                    isVideo = isVideo,
+                    isImage = isImage,
+                )
+            }
+            return result.sortedByDescending { it.dateMs }
+        }
+
+        val collection = MediaStore.Files.getContentUri("external")
+        val projection = arrayOf(
+            MediaStore.Files.FileColumns._ID,
+            MediaStore.Files.FileColumns.DISPLAY_NAME,
+            MediaStore.Files.FileColumns.MIME_TYPE,
+            MediaStore.Files.FileColumns.DATE_ADDED,
+        )
+        val selection = "${MediaStore.Files.FileColumns.RELATIVE_PATH} LIKE ? AND " +
+            "(${MediaStore.Files.FileColumns.MIME_TYPE} LIKE 'image/%' OR " +
+            "${MediaStore.Files.FileColumns.MIME_TYPE} LIKE 'video/%')"
+        val selectionArgs = arrayOf("Download/%")
+        val sortOrder = "${MediaStore.Files.FileColumns.DATE_ADDED} DESC"
+
+        runCatching {
+            appContext.contentResolver.query(collection, projection, selection, selectionArgs, sortOrder)?.use { cursor ->
+                val idCol = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns._ID)
+                val nameCol = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.DISPLAY_NAME)
+                val mimeCol = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.MIME_TYPE)
+                val dateCol = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.DATE_ADDED)
+                while (cursor.moveToNext()) {
+                    val id = cursor.getLong(idCol)
+                    val name = cursor.getString(nameCol) ?: continue
+                    val mime = cursor.getString(mimeCol) ?: continue
+                    val date = cursor.getLong(dateCol) * 1000L
+                    val isImage = mime.startsWith("image/")
+                    val isVideo = mime.startsWith("video/")
+                    if (!isImage && !isVideo) continue
+                    val uri = ContentUris.withAppendedId(collection, id)
+                    result += com.rhkr8521.p2ptransfer.core.ReceivedFile(
+                        uri = uri,
+                        name = name,
+                        mimeType = mime,
+                        dateMs = date,
+                        isVideo = isVideo,
+                        isImage = isImage,
+                    )
+                }
+            }
+        }
+        return result
     }
 
     override fun onCleared() {
@@ -883,7 +976,8 @@ class P2pViewModel(
     private suspend fun pollTunnelPeersOnce() {
         val endpoints = buildTunnelEndpoints(activeTunnelHost, activeTunnelSsl)
         val request = Request.Builder()
-            .url("${endpoints.adminBaseUrl}/_health?token=${activeTunnelToken}")
+            .url("${endpoints.adminBaseUrl}/_health")
+            .addHeader("Authorization", "Bearer $activeTunnelToken")
             .get()
             .build()
 
@@ -1105,6 +1199,7 @@ class P2pViewModel(
                 storage.deleteTarget(directTarget)
                 clearProgress()
                 emitEvent(string(R.string.event_zip_extract_complete, extracted.size))
+                refreshReceivedFiles()
             } catch (e: Exception) {
                 clearProgress()
                 emitEvent(string(R.string.event_zip_extract_failed))
@@ -1112,6 +1207,7 @@ class P2pViewModel(
         } else {
             clearProgress()
             emitEvent(string(R.string.event_receive_complete, directTarget.displayName))
+            refreshReceivedFiles()
         }
     }
 
@@ -1209,6 +1305,7 @@ class P2pViewModel(
 
         clearProgress()
         emitEvent(string(R.string.event_multi_receive_complete, savedTargets.size))
+        refreshReceivedFiles()
     }
 
     private suspend fun startOutgoingTransfer(

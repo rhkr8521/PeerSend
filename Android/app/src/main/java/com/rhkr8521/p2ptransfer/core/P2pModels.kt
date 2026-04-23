@@ -52,6 +52,15 @@ data class TunnelEndpoints(
     val tcpHost: String,
 )
 
+data class ReceivedFile(
+    val uri: Uri,
+    val name: String,
+    val mimeType: String,
+    val dateMs: Long,
+    val isVideo: Boolean,
+    val isImage: Boolean,
+)
+
 data class P2pUiState(
     val mode: TransferMode = TransferMode.LAN,
     val myName: String = "",
@@ -69,4 +78,5 @@ data class P2pUiState(
     val transferProgress: TransferProgressUi? = null,
     val pendingRequest: IncomingTransferRequest? = null,
     val isBusy: Boolean = false,
+    val receivedFiles: List<ReceivedFile> = emptyList(),
 )
