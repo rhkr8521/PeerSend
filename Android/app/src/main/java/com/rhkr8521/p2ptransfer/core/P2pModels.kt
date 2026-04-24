@@ -79,4 +79,5 @@ data class P2pUiState(
     val pendingRequest: IncomingTransferRequest? = null,
     val isBusy: Boolean = false,
     val receivedFiles: List<ReceivedFile> = emptyList(),
+    val showPublicTunnelUnavailableSheet: Boolean = false,
 )

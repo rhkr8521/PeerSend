@@ -129,6 +129,14 @@ struct ContentView: View {
                 handlePickedTransferURLs(urls)
             }
         }
+        .sheet(isPresented: Binding(
+            get: { !usesPadModalDialogs && viewModel.showPublicTunnelUnavailableSheet },
+            set: { if !$0 { viewModel.dismissPublicTunnelUnavailableSheet() } }
+        )) {
+            PublicTunnelUnavailableSheet(onClose: { viewModel.dismissPublicTunnelUnavailableSheet() })
+                .presentationDetents([.height(200)])
+                .presentationDragIndicator(.visible)
+        }
         .onChange(of: photoPickerItems) { items in
             guard !items.isEmpty else { return }
             Task {
@@ -288,6 +296,12 @@ struct ContentView: View {
                     onReceive: { viewModel.respondToPendingRequest(accept: true) },
                     onReject: { viewModel.respondToPendingRequest(accept: false) }
                 )
+            }
+        }
+
+        if usesPadModalDialogs && viewModel.showPublicTunnelUnavailableSheet {
+            OverlayModalBackdrop(onDismiss: { viewModel.dismissPublicTunnelUnavailableSheet() }) {
+                PublicTunnelUnavailableSheet(inDialog: true, onClose: { viewModel.dismissPublicTunnelUnavailableSheet() })
             }
         }
 
@@ -1185,6 +1199,30 @@ private struct IncomingRequestSheet: View {
                     SecondaryButton(title: L10n.reject, action: onReject)
                     PrimaryButton(title: L10n.receive, enabled: true, action: onReceive)
                 }
+            }
+        }
+    }
+}
+
+private struct PublicTunnelUnavailableSheet: View {
+    let inDialog: Bool
+    let onClose: () -> Void
+
+    init(inDialog: Bool = false, onClose: @escaping () -> Void) {
+        self.inDialog = inDialog
+        self.onClose = onClose
+    }
+
+    var body: some View {
+        SheetSurface(inDialog: inDialog) {
+            VStack(alignment: .leading, spacing: 18) {
+                Text(L10n.publicTunnelUnavailableTitle)
+                    .font(.headline)
+                    .foregroundStyle(Color.appPrimaryText)
+                Text(L10n.publicTunnelUnavailableBody)
+                    .font(.body)
+                    .foregroundStyle(Color.appSecondaryText)
+                PrimaryButton(title: L10n.close, enabled: true, action: onClose)
             }
         }
     }

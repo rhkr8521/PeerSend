@@ -356,6 +356,17 @@ class MainActivity : ComponentActivity() {
                     }
                 }
 
+                if (uiState.showPublicTunnelUnavailableSheet) {
+                    PeerSendBottomSheet(onDismissRequest = { viewModel.dismissPublicTunnelUnavailableSheet() }) {
+                        SheetTitle(stringResource(R.string.public_tunnel_unavailable_title))
+                        SheetBodyText(stringResource(R.string.public_tunnel_unavailable_body))
+                        Button(
+                            onClick = { viewModel.dismissPublicTunnelUnavailableSheet() },
+                            modifier = Modifier.fillMaxWidth(),
+                        ) { Text(stringResource(R.string.close)) }
+                    }
+                }
+
                 if (showUpdateRequiredDialog) {
                     PeerSendBottomSheet(onDismissRequest = { finish() }) {
                         SheetTitle(stringResource(R.string.update_required_title))

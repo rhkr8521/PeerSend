@@ -17,11 +17,11 @@ export async function GET() {
       latency,
       data,
     });
-  } catch (e) {
+  } catch {
     return Response.json({
       status: "offline",
       latency: null,
-      error: e.message,
+      error: "Health check failed",
     });
   }
 }

@@ -100,13 +100,15 @@
     <string name="event_connect_failed">Connection failed: %1$s</string>
     <string name="unknown_error">Unknown error</string>
     <string name="event_lan_server_failed">Failed to start LAN receive server: %1$s</string>
-    <string name="tunnel_local_server_failed">Tunnel local receive server failed: %1$s</string>
+    <string name="tunnel_local_server_failed">Tunnel local receive server failed.</string>
     <string name="generic_error">error</string>
     <string name="tunnel_status_ws_connecting">Connecting to WS…</string>
     <string name="tunnel_status_ws_connected_registering">WS connected (registering…)</string>
     <string name="event_tunnel_message_failed">Failed to process tunnel message: %1$s</string>
     <string name="tunnel_status_ws_closed_prompt">WS disconnected. Use Refresh or Apply and Reconnect to connect again.</string>
-    <string name="tunnel_status_ws_failed">Connection failed: %1$s</string>
+    <string name="tunnel_status_ws_failed">Connection failed.</string>
+    <string name="public_tunnel_unavailable_title">Cannot Connect to Server</string>
+    <string name="public_tunnel_unavailable_body">Cannot connect to the public tunnel server. Please check your network connection.</string>
     <string name="ws_failed">WS failed</string>
     <string name="tunnel_status_registered_with_port">Registered (my port: %1$d)</string>
     <string name="tunnel_status_registered">Registered</string>
@@ -115,7 +117,7 @@
     <string name="event_tunnel_stream_failed">Tunnel stream failed: %1$s</string>
     <string name="error_response_empty">No response</string>
     <string name="error_server_response_invalid">Invalid server response</string>
-    <string name="tunnel_status_peer_fetch_failed">Failed to fetch peers: %1$s</string>
+    <string name="tunnel_status_peer_fetch_failed">Failed to fetch peers.</string>
     <string name="event_request_handle_failed">Failed to process transfer request: %1$s</string>
     <string name="unknown_sender">Unknown</string>
     <string name="generic_file_label">File</string>

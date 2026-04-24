@@ -140,20 +140,20 @@ enum L10n {
     static func tunnelWSClosedPrompt() -> String {
         isKorean ? "연결이 끊겼습니다. 새로고침 또는 적용 및 재연결로 다시 연결하세요." : "Connection closed. Use Refresh or Apply and Reconnect to connect again."
     }
-    static func tunnelWSFailed(_ reason: String) -> String {
-        isKorean ? "연결 실패: \(reason)" : "Connection failed: \(reason)"
-    }
-    static func tunnelPeerFetchFailed(_ reason: String) -> String {
-        isKorean ? "피어 조회 실패: \(reason)" : "Failed to fetch peers: \(reason)"
-    }
-    static func tunnelLocalServerFailed(_ reason: String) -> String {
-        isKorean ? "터널 로컬 수신 서버 실패: \(reason)" : "Tunnel local receive server failed: \(reason)"
-    }
+    static var tunnelWSFailed: String { isKorean ? "연결 실패." : "Connection failed." }
+    static var tunnelPeerFetchFailed: String { isKorean ? "피어 조회 실패." : "Failed to fetch peers." }
+    static var tunnelLocalServerFailed: String { isKorean ? "터널 로컬 수신 서버 실패." : "Tunnel local receive server failed." }
     static func tunnelStreamFailed(_ reason: String) -> String {
         isKorean ? "터널 스트림 처리 실패: \(reason)" : "Tunnel stream failed: \(reason)"
     }
     static func tunnelMessageFailed(_ reason: String) -> String {
         isKorean ? "터널 메시지 처리 실패: \(reason)" : "Failed to process tunnel message: \(reason)"
+    }
+    static var publicTunnelUnavailableTitle: String { isKorean ? "서버 접속 불가" : "Cannot Connect to Server" }
+    static var publicTunnelUnavailableBody: String {
+        isKorean
+            ? "현재 공개 터널 서버에 접속할 수 없습니다. 네트워크 상태를 확인해주세요."
+            : "Cannot connect to the public tunnel server. Please check your network connection."
     }
     static var unknownError: String { isKorean ? "알 수 없는 오류" : "Unknown error" }
     static var genericError: String { isKorean ? "오류" : "Error" }

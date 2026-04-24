@@ -43,6 +43,7 @@ final class PeerSendViewModel: ObservableObject {
     @Published var eventMessage: String?
     @Published var blockingPrompt: BlockingPrompt?
     @Published var receivedFiles: [ReceivedFileItem] = []
+    @Published var showPublicTunnelUnavailableSheet: Bool = false
 
     private let preferences: AppPreferences
     private let storage: FileTransferStorage
@@ -682,7 +683,7 @@ final class PeerSendViewModel: ObservableObject {
             }
             tunnelLocalListener = listener
         } catch {
-            updateTunnelStatus(L10n.tunnelLocalServerFailed(error.localizedDescription))
+            updateTunnelStatus(L10n.tunnelLocalServerFailed)
         }
     }
 
@@ -756,7 +757,10 @@ final class PeerSendViewModel: ObservableObject {
                 if self.tunnelWebSocketTask === task {
                     self.tunnelWebSocketTask = nil
                 }
-                self.updateTunnelStatus(L10n.tunnelWSFailed(error.localizedDescription))
+                self.updateTunnelStatus(L10n.tunnelWSFailed)
+                if self.activeUsePublicTunnel {
+                    self.publish { self.showPublicTunnelUnavailableSheet = true }
+                }
             }
         }
     }
@@ -925,7 +929,7 @@ final class PeerSendViewModel: ObservableObject {
             }
             syncTunnelPeers()
         } catch {
-            updateTunnelStatus(L10n.tunnelPeerFetchFailed(error.localizedDescription))
+            updateTunnelStatus(L10n.tunnelPeerFetchFailed)
         }
     }
 
@@ -1507,6 +1511,10 @@ final class PeerSendViewModel: ObservableObject {
 
     private func currentTunnelDisplayName() -> String {
         baseDeviceName.isEmpty ? tunnelSubdomain : baseDeviceName
+    }
+
+    func dismissPublicTunnelUnavailableSheet() {
+        showPublicTunnelUnavailableSheet = false
     }
 
     private func updateTunnelStatus(_ status: String) {

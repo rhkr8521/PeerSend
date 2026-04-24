@@ -745,7 +745,7 @@ class P2pViewModel(
                     }
                 }
             } catch (e: Exception) {
-                updateTunnelStatus(string(R.string.tunnel_local_server_failed, e.message ?: string(R.string.generic_error)))
+                updateTunnelStatus(string(R.string.tunnel_local_server_failed))
             } finally {
                 serverSocket.closeQuietly()
             }
@@ -835,7 +835,10 @@ class P2pViewModel(
                         tunnelWebSocket = null
                     }
                     tunnelRegistered = false
-                    updateTunnelStatus(string(R.string.tunnel_status_ws_failed, t.message ?: string(R.string.ws_failed)))
+                    updateTunnelStatus(string(R.string.tunnel_status_ws_failed))
+                    if (activeUsePublicTunnel) {
+                        _uiState.update { it.copy(showPublicTunnelUnavailableSheet = true) }
+                    }
                 }
             },
         )
@@ -1022,7 +1025,7 @@ class P2pViewModel(
                 syncTunnelPeers()
             }
         }.onFailure {
-            updateTunnelStatus(string(R.string.tunnel_status_peer_fetch_failed, it.message ?: string(R.string.generic_error)))
+            updateTunnelStatus(string(R.string.tunnel_status_peer_fetch_failed))
         }
     }
 
@@ -1733,6 +1736,10 @@ class P2pViewModel(
                 },
             )
         }
+    }
+
+    fun dismissPublicTunnelUnavailableSheet() {
+        _uiState.update { it.copy(showPublicTunnelUnavailableSheet = false) }
     }
 
     private fun updateTunnelStatus(status: String) {
