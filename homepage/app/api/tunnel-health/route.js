@@ -83,6 +83,15 @@ function summarize(data) {
   const latest = data.checks.length > 0 ? data.checks[data.checks.length - 1] : null;
   const currentOk = latest ? latest.ok : null;
 
+  // find last !ok → ok transition timestamp
+  let recoveredAt = null;
+  const sorted = [...data.checks].sort((a, b) => a.t - b.t);
+  for (let i = 1; i < sorted.length; i++) {
+    if (!sorted[i - 1].ok && sorted[i].ok) {
+      recoveredAt = sorted[i].t;
+    }
+  }
+
   const weekly = [];
   for (let i = 6; i >= 0; i--) {
     const d = new Date(now);
@@ -103,6 +112,7 @@ function summarize(data) {
     currentStatus: latest === null ? "unknown" : latest.ok ? "online" : "offline",
     lastChecked: latest?.t ?? null,
     latency: latest?.latency ?? null,
+    recoveredAt,
   };
 }
 

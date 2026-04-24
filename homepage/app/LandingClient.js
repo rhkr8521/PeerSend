@@ -337,13 +337,16 @@ function TunnelStatusButton({ locale }) {
   const [weekly, setWeekly] = useState([]);
   const [latency, setLatency] = useState(null);
   const [lastChecked, setLastChecked] = useState(null);
+  const [recoveredAt, setRecoveredAt] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [hoveredBar, setHoveredBar] = useState(null);
 
   const applyJson = useCallback((json) => {
     setCurrentStatus(json.currentStatus === "unknown" ? "checking" : json.currentStatus);
     setWeekly(json.weekly ?? []);
     setLatency(json.latency ?? null);
     setLastChecked(json.lastChecked ? new Date(json.lastChecked) : null);
+    setRecoveredAt(json.recoveredAt ?? null);
   }, []);
 
   const load = useCallback(async () => {
@@ -384,7 +387,12 @@ function TunnelStatusButton({ locale }) {
   };
 
   const todayStatus = weekly.length > 0 ? weekly[weekly.length - 1].status : null;
-  const showUnstable = todayStatus === "yellow" && currentStatus !== "offline";
+  const ONE_HOUR_MS = 60 * 60 * 1000;
+  const showUnstable =
+    todayStatus === "yellow" &&
+    currentStatus !== "offline" &&
+    recoveredAt !== null &&
+    Date.now() - recoveredAt < ONE_HOUR_MS;
 
   const formatTime = (date) => {
     if (!date) return "-";
@@ -448,12 +456,17 @@ function TunnelStatusButton({ locale }) {
               <div className="tunnel-weekly">
                 <span className="tunnel-weekly-label">{locale === "ko" ? "최근 7일" : "Last 7 days"}</span>
                 <div className="tunnel-weekly-bars">
-                  {weekly.map((item) => (
+                  {weekly.map((item, idx) => (
                     <span
                       key={item.date}
                       className={`tunnel-week-bar wbar-${item.status}`}
-                      title={weekDotTitle(item)}
-                    />
+                      onMouseEnter={() => setHoveredBar(idx)}
+                      onMouseLeave={() => setHoveredBar(null)}
+                    >
+                      {hoveredBar === idx && (
+                        <span className="wbar-tooltip">{weekDotTitle(item)}</span>
+                      )}
+                    </span>
                   ))}
                 </div>
               </div>
@@ -508,7 +521,13 @@ export default function LandingClient({ initialLocale = "en" }) {
   }, []);
 
   useEffect(() => {
-    const closeMenu = () => setMobileMenuOpen(false);
+    let prevWidth = window.innerWidth;
+    const closeMenu = () => {
+      if (window.innerWidth !== prevWidth) {
+        prevWidth = window.innerWidth;
+        setMobileMenuOpen(false);
+      }
+    };
     window.addEventListener("resize", closeMenu);
     return () => window.removeEventListener("resize", closeMenu);
   }, []);
@@ -527,10 +546,11 @@ export default function LandingClient({ initialLocale = "en" }) {
   }, [mobileMenuOpen]);
 
   return (
-    <main className="landing-shell">
+    <>
       <div className="mesh mesh-one" />
       <div className="mesh mesh-two" />
       <div className="mesh mesh-three" />
+    <main className="landing-shell">
 
       <header className="site-topbar desktop-only">
         <div className="brand-wrap">
@@ -834,5 +854,6 @@ export default function LandingClient({ initialLocale = "en" }) {
 
       <SiteFooter footer={content.footer} locale={locale} />
     </main>
+    </>
   );
 }

@@ -28,6 +28,7 @@ body {
   margin: 0;
   min-height: 100vh;
   overflow-x: hidden;
+  position: relative;
   background:
     radial-gradient(circle at 10% 10%, rgba(97, 230, 213, 0.2), transparent 24%),
     radial-gradient(circle at 88% 18%, rgba(255, 135, 96, 0.16), transparent 28%),
@@ -51,7 +52,6 @@ a {
   width: 100%;
   max-width: 1600px;
   margin: 0 auto;
-  overflow-x: clip;
   padding: 28px clamp(18px, 4vw, 56px) 104px;
 }
 
@@ -388,6 +388,7 @@ a {
   font-size: 0.78rem;
   font-weight: 500;
   line-height: 1.4;
+  text-align: center;
 }
 
 .tunnel-weekly {
@@ -414,10 +415,45 @@ a {
   border-radius: 4px;
   cursor: default;
   transition: opacity 120ms ease;
+  position: relative;
 }
 
 .tunnel-week-bar:hover {
-  opacity: 0.75;
+  opacity: 0.85;
+}
+
+.wbar-tooltip {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(10, 20, 35, 0.95);
+  border: 1px solid rgba(160, 190, 220, 0.18);
+  color: var(--text);
+  font-size: 0.72rem;
+  font-weight: 500;
+  white-space: nowrap;
+  padding: 4px 8px;
+  border-radius: 6px;
+  pointer-events: none;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  animation: wbar-tooltip-in 100ms ease forwards;
+  z-index: 10;
+}
+
+.wbar-tooltip::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 4px solid transparent;
+  border-top-color: rgba(160, 190, 220, 0.18);
+}
+
+@keyframes wbar-tooltip-in {
+  from { opacity: 0; transform: translateX(-50%) translateY(3px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
 }
 
 .wbar-green   { background: rgba(74, 222, 128, 0.65); }
@@ -2483,6 +2519,7 @@ a {
   gap: 18px;
   margin-bottom: 40px;
   padding: 14px 18px;
+  min-height: 66px;
   border: 1px solid rgba(160, 190, 220, 0.1);
   border-radius: 24px;
   background: rgba(6, 17, 31, 0.78);
@@ -2498,6 +2535,7 @@ a {
   gap: 14px;
   margin-bottom: 24px;
   padding: 12px 14px;
+  min-height: 66px;
   border: 1px solid rgba(160, 190, 220, 0.1);
   border-radius: 20px;
   background: rgba(6, 17, 31, 0.82);
