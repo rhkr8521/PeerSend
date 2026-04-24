@@ -5,3 +5,4 @@ psutil>=7.1,<8.0
 python-multipart>=0.0.20,<1.0
 websockets>=12,<16
 keyring>=25,<26
+certifi>=2025.0
