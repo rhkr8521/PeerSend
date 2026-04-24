@@ -52,7 +52,7 @@ from tkinter import ttk, messagebox, filedialog
 try:
     from engine.version import ENGINE_VERSION as APP_VERSION
 except Exception:
-    APP_VERSION = "1.3.2"
+    APP_VERSION = "1.3.3"
 
 
 # =========================
@@ -76,6 +76,18 @@ POLL_INTERVAL_SEC = float(os.getenv("PEER_POLL_INTERVAL", "3.0"))
 
 TUNNEL_TCP_NAME = "file_tunnel"
 CONTROL_CODEC = os.getenv("CONTROL_CODEC", "pickle").strip().lower()
+
+
+def _safe_extractall(archive: zipfile.ZipFile, extract_dir: str) -> list[str]:
+    abs_base = os.path.realpath(extract_dir)
+    names: list[str] = []
+    for member in archive.infolist():
+        target = os.path.realpath(os.path.join(abs_base, member.filename))
+        if not target.startswith(abs_base + os.sep):
+            raise ValueError(f"Zip slip blocked: {member.filename}")
+        archive.extract(member, extract_dir)
+        names.append(member.filename)
+    return names
 
 
 def detect_ui_language() -> str:
@@ -1410,11 +1422,19 @@ class UnifiedApp:
             os.makedirs(extract_dir, exist_ok=True)
             try:
                 with zipfile.ZipFile(save_path, "r") as z:
-                    extracted_list = z.namelist()
-                    z.extractall(extract_dir)
+                    extracted_list = _safe_extractall(z, extract_dir)
                 os.remove(save_path)
                 base_path_for_msg = extract_dir
                 saved_for_msg = []
+            except ValueError:
+                import shutil as _shutil
+                _shutil.rmtree(extract_dir, ignore_errors=True)
+                try:
+                    os.remove(save_path)
+                except OSError:
+                    pass
+                base_path_for_msg = download_dir
+                saved_for_msg = saved_paths
             except Exception:
                 base_path_for_msg = download_dir
                 saved_for_msg = saved_paths

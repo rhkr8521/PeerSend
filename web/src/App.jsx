@@ -3,7 +3,7 @@ import { SiGoogleplay, SiAppstore, SiUbuntu } from "react-icons/si";
 
 const LOCAL_ORIGIN = import.meta.env.VITE_PEERSEND_LOCAL_ORIGIN || "http://127.0.0.1:8765";
 const CUSTOM_PROTOCOL = import.meta.env.VITE_PEERSEND_PROTOCOL || "peersend://launch";
-const REQUIRED_ENGINE_VERSION = import.meta.env.VITE_PEERSEND_REQUIRED_ENGINE_VERSION || "1.3.2";
+const REQUIRED_ENGINE_VERSION = import.meta.env.VITE_PEERSEND_REQUIRED_ENGINE_VERSION || "1.3.3";
 const DOWNLOAD_URLS = {
   windows:
     import.meta.env.VITE_PEERSEND_WINDOWS_DOWNLOAD_URL ||
@@ -457,8 +457,19 @@ async function probeLocalEngine() {
     if (!response.ok) {
       return null;
     }
-    const data = await response.json();
-    return data?.ok ? data : null;
+    const health = await response.json();
+    if (!health?.ok) {
+      return null;
+    }
+    const tokenRes = await fetch(buildUrl(LOCAL_ORIGIN, "/api/token"), {
+      method: "POST",
+      mode: "cors",
+    });
+    if (!tokenRes.ok) {
+      return null;
+    }
+    const tokenData = await tokenRes.json();
+    return { ...health, apiToken: tokenData.apiToken };
   } catch (error) {
     return null;
   } finally {
